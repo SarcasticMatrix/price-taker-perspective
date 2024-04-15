@@ -1,5 +1,6 @@
 import numpy as np
 import pandas as pd
+import random 
 
 #%%
 """generate a series of 24 random binary (two-state) variables, e.g., using a bernoulli distribution, indicating in every hour of the next day, whether the system in the balancing stage will have a deficit in power supply or an excess."""
@@ -42,3 +43,10 @@ def scenarios_generator():
                 # Append the new dataframe to the list
                 sceanario_list.append(combined_df)
     return(sceanario_list)
+
+def scenario_selection_250():
+    sceanario_list=scenarios_generator()
+    random.seed(42)
+    random.shuffle(sceanario_list)
+    sceanario_list_250 = sceanario_list[0:250]
+    return(sceanario_list_250)
