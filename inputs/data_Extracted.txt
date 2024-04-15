@@ -1,0 +1,2 @@
+- wind power : zone 1, https://sites.google.com/site/datasmopf/wind-scenarios
+- prices : March 2024 in DK1, https://data.nordpoolgroup.com/auction/day-ahead/prices?deliveryDate=latest&currency=EUR&aggregation=Hourly&deliveryAreas=AT
