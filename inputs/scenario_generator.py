@@ -60,7 +60,7 @@ def scenarios_generator() -> list:
 
                 combined_df = pd.DataFrame({
                     'Wind production': wind_scenario_df[wind_scenario].values,
-                    'Price': price_scenario_df[price_scenario].values,
+                    'Price DA': price_scenario_df[price_scenario].values,
                     'Power system need': power_need_scenario_df[power_need].values
                 })
 
