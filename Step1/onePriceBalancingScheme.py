@@ -28,8 +28,8 @@ def onePriceBalancingScheme(
     price_DA = np.transpose(price_DA)
     wind_production = P_nominal * np.array([scenarios[i]['Wind production'].values for i in range(len(scenarios))])
     wind_production = np.transpose(wind_production)
-    imbalance = np.array([scenarios[i]['Power system need'].values for i in range(len(scenarios))])
-    imbalance = np.transpose(imbalance)
+    power_needed = np.array([scenarios[i]['Power system need'].values for i in range(len(scenarios))])
+    power_needed = np.transpose(power_needed)
 
     ### Variables
     production_DA = m.addMVar(
@@ -38,18 +38,14 @@ def onePriceBalancingScheme(
     delta = m.addMVar(
         shape=(24,len(scenarios)), name="Forecast deviation for 24 hours for 250 scenarios", vtype=GRB.CONTINUOUS
     )
-    delta_up = m.addMVar(
-        shape=(24,len(scenarios)), lb=0, name="Positive forecast deviation for 24 hours for 250 scenarios", vtype=GRB.CONTINUOUS
-    )
-    delta_down = m.addMVar(
-        shape=(24,len(scenarios)), lb=0, name="Negative forecast deviation for 24 hours for 250 scenarios", vtype=GRB.CONTINUOUS
-    )
 
     ### Objective function
     objective = m.setObjective(
         sum( 
             sum(
-                pi * (price_DA[t,w] * production_DA[t] + 0.9 * price_DA[t,w] * delta_up[t,w] - 1.2 * price_DA[t,w] * delta_down[t,w])
+                pi * (price_DA[t,w] * production_DA[t] +
+                      (1 - power_needed[t,w]) * 0.9 * price_DA[t,w] * delta[t,w] + power_needed[t,w] * 1.2 * price_DA[t,w] * delta[t,w]
+                      ) 
                 for w in range(len(scenarios))
                 )
             for t in range(24)), GRB.MAXIMIZE)    
@@ -61,18 +57,70 @@ def onePriceBalancingScheme(
         name="Delta definition with p_{t,w}^real and p_t^DA"
     )
 
-    m.addConstrs(
-        (delta[t,w] == delta_up[t,w] - delta_down[t,w] 
-        for t in range(24) for w in range(len(scenarios))), 
-        name="Delta definition with Delta_up and Delta_down"
-    )
-
-    # m.addConstrs(
-    #     (delta_up[t,w] * (1 - imbalance[t,w]) + delta_down[t,w] * imbalance[t,w] == 0
-    #     for t in range(24) for w in range(len(scenarios))),
-    #     name='Deficit or excess forecast'
-    # )
 
     m.optimize()
 
     return m
+
+
+import matplotlib.pyplot as plt
+
+def conduct_analysis(
+        scenarios: list,
+        m: gp.Model
+    ):
+    """
+    Analyzes the results of the optimization model for the offering strategy under a one-price balancing scheme.
+
+    Inputs:
+    - m (gp.Model): Optimized model returned by onePriceBalancingScheme()
+
+    Returns:
+    - expected_profit (float): Expected profit
+    """
+
+    ## TO DO: 
+    ## - fix wind power forecast interval confidence 
+    ## - afficher les ticks pour chaque heure
+
+    production_DA = m.getAttr("X", m.getVars())[0:24]
+    price_DA = np.array([scenarios[i]['Price DA'].values for i in range(len(scenarios))])
+    price_DA = np.transpose(price_DA)
+
+    profits = []
+    for w in range(len(scenarios)):
+        profit_w = sum(price_DA[t, w] * production_DA[t] for t in range(24))
+        profits.append(profit_w)
+
+    expected_profit = np.mean(profits)
+
+    P_nominal = 200
+    wind_production_forecast = P_nominal * np.array([scenarios[i]['Wind production'].values for i in range(len(scenarios))])
+    wind_production_forecast = np.sort(wind_production_forecast, 0)[::-1]
+
+
+    time = [i for i in range(24)]
+    plt.figure()
+    plt.step(time, production_DA, label=r'$p_{t}^{DA}$', where='post', color='red')
+
+    Nbr_scenarios = wind_production_forecast.shape[1]
+    for i in range(Nbr_scenarios):
+        if i > int(Nbr_scenarios/2):
+            plt.fill_between(time, wind_production_forecast[i, :], wind_production_forecast[- i, :], alpha= 1 - int(Nbr_scenarios/2)/(i+1), color='blue', step='post')
+
+    plt.xlabel('Hours [h]')
+    plt.ylabel('Power production [MW]')
+    plt.title("Optimal hourly offered production in the day-ahead market")
+    plt.grid(visible=True)
+    plt.legend()
+    plt.show()
+
+    plt.figure()
+    plt.hist(profits, bins=20, color='skyblue', edgecolor='black', alpha=0.7)
+    plt.title(f'Profit Distribution Over Scenarios - Expected profit {expected_profit}')
+    plt.xlabel('Profit')
+    plt.ylabel('Frequency')
+    plt.grid(True)
+    plt.show()
+
+    return expected_profit

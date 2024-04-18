@@ -20,7 +20,7 @@ def imbalance_generator(
     - deficit_probability (float): Probability of having a deficit in power supply in each hour.
 
     Returns:
-    - hourly_state_df (pd.DataFrame): DataFrame containing ones and zeros. 1 represents a deficit, 0 represents an excess.
+    - power_needed (pd.DataFrame): DataFrame containing ones and zeros. 1 represents a deficit, 0 represents an excess.
     """
 
     random.seed(seed)
@@ -28,19 +28,19 @@ def imbalance_generator(
     nbHour = 24
     nbScenarios = 3
 
-    hourly_state_df = pd.DataFrame(index=range(0,nbHour))
+    power_needed = pd.DataFrame(index=range(0,nbHour))
 
     for i in range(1,nbScenarios+1):
         state = (np.random.rand(nbHour) > deficit_probability).astype(int)
-        hourly_state_df[i] = state
+        power_needed[i] = state
 
     if export:
         print("Power need scenarios have been generated and are getting exported")
         csv_filename = 'inputs/power_system_need_scenarios.csv'
-        hourly_state_df.to_csv(csv_filename, index=True)
+        power_needed.to_csv(csv_filename, index=True)
 
     else: 
-        return hourly_state_df
+        return power_needed
 
 def scenarios_generator() -> list:
     """
