@@ -26,14 +26,10 @@ def onePriceBalancingScheme(
     pi = 1 / len(scenarios)
     price_DA = np.array([scenarios[i]['Price DA'].values for i in range(len(scenarios))])
     price_DA = np.transpose(price_DA)
-    wind_production = np.array([scenarios[i]['Wind production'].values for i in range(len(scenarios))])
+    wind_production = P_nominal * np.array([scenarios[i]['Wind production'].values for i in range(len(scenarios))])
     wind_production = np.transpose(wind_production)
     imbalance = np.array([scenarios[i]['Power system need'].values for i in range(len(scenarios))])
     imbalance = np.transpose(imbalance)
-
-    # --> TO DO: generate scenarios for p_{t,w}^real <--
-    power_need += power_need * imbalance * np.random.normal(size=(24,len(scenarios)))
-    power_need -= power_need * imbalance * np.random.normal(size=(24,len(scenarios)))
 
     ### Variables
     production_DA = m.addMVar(
@@ -60,7 +56,7 @@ def onePriceBalancingScheme(
 
     ### Constraints
     m.addConstrs(
-        (delta[t,w] == power_need[t,w] - production_DA[t]
+        (delta[t,w] == wind_production[t,w] - production_DA[t]
         for t in range(24) for w in range(len(scenarios))),
         name="Delta definition with p_{t,w}^real and p_t^DA"
     )
@@ -70,6 +66,12 @@ def onePriceBalancingScheme(
         for t in range(24) for w in range(len(scenarios))), 
         name="Delta definition with Delta_up and Delta_down"
     )
+
+    # m.addConstrs(
+    #     (delta_up[t,w] * (1 - imbalance[t,w]) + delta_down[t,w] * imbalance[t,w] == 0
+    #     for t in range(24) for w in range(len(scenarios))),
+    #     name='Deficit or excess forecast'
+    # )
 
     m.optimize()
 
