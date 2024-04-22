@@ -153,7 +153,7 @@ dmypy.json
 cython_debug/
 
 # debug 
-*/.vscode
+/.vscode/launch.json
 
 # Output of models
 *.json
