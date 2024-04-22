@@ -5,7 +5,7 @@ scenarios, _ = scenarios_selection_250()
 
 print(scenarios[0].head(10))
 
-model = onePriceBalancingScheme(scenarios=scenarios)
+model = onePriceBalancingScheme(scenarios=scenarios, export=True)
 
 print(model.status)
 

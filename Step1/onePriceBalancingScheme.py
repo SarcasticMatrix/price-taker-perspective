@@ -4,9 +4,24 @@ import numpy as np
 import random
 
 
+def export_results(model:gp.Model):
+    """
+    Export the retults to result.json
+    """
+
+    values = model.getAttr("X", model.getVars())
+    names = model.getAttr("VarName", model.getVars())
+    name_to_value = {
+        name: value for name, value in zip(names,values)
+    }
+    import json
+    with open('result.json', 'w') as f:
+        json.dump(name_to_value, f, indent=1)
+
 def onePriceBalancingScheme(
         scenarios: list,
-        seed: int = 42 
+        seed: int = 42,
+        export: bool = False
 ) -> gp.Model:
     """
     Implement model for the Offering Strategy Under a One-Price Balancing Scheme
@@ -60,6 +75,10 @@ def onePriceBalancingScheme(
 
     m.optimize()
 
+    if m.status == 2 and export:
+        export_results(m)
+    elif m.status != 2 and export:
+        print("Model have not converged - impossible to export results to json")
     return m
 
 
@@ -79,13 +98,13 @@ def conduct_analysis(
     - expected_profit (float): Expected profit
     """
 
-    ## TO DO: 
-    ## - fix wind power forecast interval confidence 
-    ## - afficher les ticks pour chaque heure
-
     production_DA = m.getAttr("X", m.getVars())[0:24]
     price_DA = np.array([scenarios[i]['Price DA'].values for i in range(len(scenarios))])
     price_DA = np.transpose(price_DA)
+
+    delta = m.getAttr("X", m.getVars())[24:]
+    delta = np.array(delta).reshape(24,250).T
+    delta = np.sort(delta, 0)
 
     profits = []
     for w in range(len(scenarios)):
@@ -98,27 +117,57 @@ def conduct_analysis(
     wind_production_forecast = P_nominal * np.array([scenarios[i]['Wind production'].values for i in range(len(scenarios))])
     wind_production_forecast = np.sort(wind_production_forecast, 0)
 
-    time = [i for i in range(24)]
-    plt.figure()
+    time = [i for i in range(25)]
 
-    plt.step(time, wind_production_forecast[0, :], color='green', label=r'Min power avalaible at time $t$', linestyle='--', where='post')
-    plt.step(time, wind_production_forecast[-1, :], color='purple', label=r'Max power avalaible at time $t$', linestyle='--', where='post')
-    plt.step(time, wind_production_forecast.mean(axis=0), color='blue', label=r'Mean power avalaible at time $t$', linestyle='--', where='post')
+    wind_max = wind_production_forecast[-1, :]
+    wind_max = np.hstack((wind_max, wind_max[-1]))
+    wind_mean = wind_production_forecast.mean(axis=0)
+    wind_mean = np.hstack((wind_mean, wind_mean[-1]))
+    wind_min = wind_production_forecast[0, :]
+    wind_min = np.hstack((wind_min, wind_min[-1]))
 
-    # Nbr_scenarios = wind_production_forecast.shape[1]
-    # cmap = plt.get_cmap('Blues') 
-    # for i in range(Nbr_scenarios):
-    #     if i < Nbr_scenarios - i:
-    #         plt.fill_between(time, wind_production_forecast[i], wind_production_forecast[Nbr_scenarios - i - 1], color=cmap((i+1) / (Nbr_scenarios-1)), step='post')
+    delta_max = delta[-1, :]
+    delta_max = np.hstack((delta_max, delta_max[-1]))
+    delta_mean = delta.mean(axis=0)
+    delta_mean = np.hstack((delta_mean, delta_mean[-1]))
+    delta_min = delta[0, :]
+    delta_min = np.hstack((delta_min, delta_min[-1]))
 
-    plt.step(time, production_DA, label=r'$p_{t}^{DA}$', where='post', color='red')
+    production_DA = np.hstack((production_DA, production_DA[-1]))
 
-    plt.xlabel('Hours [h]')
-    plt.ylabel('Power production [MW]')
-    plt.title("Optimal hourly offered production in the day-ahead market")
-    plt.grid(visible=True)
-    plt.legend()
+
+    fig, (ax1, ax2) = plt.subplots(2, 1, sharex=True, gridspec_kw={'height_ratios': [2, 1]})
+
+    ax1.step(time, wind_max, color='purple', linestyle='dotted', where='post', linewidth=1)
+    ax1.step(time, wind_mean, color='purple', linestyle='solid', where='post', linewidth=1)
+    ax1.step(time, wind_min, color='purple', linestyle='dashed', where='post', linewidth=1)
+    ax1.step(np.nan, np.nan, color='purple', linestyle='solid', label='Power availability', where='post', linewidth=0.7)
+
+    ax1.step(time, production_DA, label=r'$p_{t}^{DA}$', where='post', color='red')
+
+    ax1.set_title(r"DA offered production $p_t^{DA}$ and wind power forecast $p_{t,w}^{real}$")
+    ax1.set_ylabel('Power [MW]')
+    ax1.grid(visible=True, which='both', linestyle='--', color='gray', linewidth=0.5, alpha=0.8)
+    ax1.grid(which='minor', alpha=0.5)
+    ax1.legend()
+
+    ax2.step(time, delta_max, color='blue', linestyle='dotted', where='post', linewidth=1)
+    ax2.step(time, delta_mean, color='blue', linestyle='solid', where='post', linewidth=1)
+    ax2.step(time, delta_min, color='blue', linestyle='dashed', where='post', linewidth=1)
+    ax2.step(np.nan, np.nan, color='blue', linestyle='solid', label='Planned imbalance', linewidth=0.7)
+
+    ax2.set_title(r"Planned power deviation from forecasts $\Delta_{t,w}$")
+    ax2.set_xlabel('Hours')
+    ax2.set_ylabel('Power [MW]')
+    ax2.grid(visible=True, which='both', linestyle='--', color='gray', linewidth=0.5, alpha=0.8)
+    ax2.grid(which='minor', alpha=0.5)
+    ax2.legend()
+
+    # plt.suptitle("Hourly offered production in the day-ahead market", fontweight='bold')
+    plt.tight_layout()
+    plt.xticks(time, [f"H{i}" for i in range(24)] + ['H0'])
     plt.show()
+
 
     plt.figure()
     plt.hist(profits, bins=20, color='skyblue', edgecolor='black', alpha=0.7)
