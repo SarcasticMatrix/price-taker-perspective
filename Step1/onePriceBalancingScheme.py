@@ -96,17 +96,22 @@ def conduct_analysis(
 
     P_nominal = 200
     wind_production_forecast = P_nominal * np.array([scenarios[i]['Wind production'].values for i in range(len(scenarios))])
-    wind_production_forecast = np.sort(wind_production_forecast, 0)[::-1]
-
+    wind_production_forecast = np.sort(wind_production_forecast, 0)
 
     time = [i for i in range(24)]
     plt.figure()
-    plt.step(time, production_DA, label=r'$p_{t}^{DA}$', where='post', color='red')
 
-    Nbr_scenarios = wind_production_forecast.shape[1]
-    for i in range(Nbr_scenarios):
-        if i > int(Nbr_scenarios/2):
-            plt.fill_between(time, wind_production_forecast[i, :], wind_production_forecast[- i, :], alpha= 1 - int(Nbr_scenarios/2)/(i+1), color='blue', step='post')
+    plt.step(time, wind_production_forecast[0, :], color='green', label=r'Min power avalaible at time $t$', linestyle='--', where='post')
+    plt.step(time, wind_production_forecast[-1, :], color='purple', label=r'Max power avalaible at time $t$', linestyle='--', where='post')
+    plt.step(time, wind_production_forecast.mean(axis=0), color='blue', label=r'Mean power avalaible at time $t$', linestyle='--', where='post')
+
+    # Nbr_scenarios = wind_production_forecast.shape[1]
+    # cmap = plt.get_cmap('Blues') 
+    # for i in range(Nbr_scenarios):
+    #     if i < Nbr_scenarios - i:
+    #         plt.fill_between(time, wind_production_forecast[i], wind_production_forecast[Nbr_scenarios - i - 1], color=cmap((i+1) / (Nbr_scenarios-1)), step='post')
+
+    plt.step(time, production_DA, label=r'$p_{t}^{DA}$', where='post', color='red')
 
     plt.xlabel('Hours [h]')
     plt.ylabel('Power production [MW]')
