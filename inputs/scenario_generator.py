@@ -1,18 +1,19 @@
 import numpy as np
 import pandas as pd
-import random 
+import random
 
 wind_scenario_df = pd.read_csv("inputs/scen_zone1.csv", sep=";", index_col=0)
 price_scenario_df = pd.read_csv("inputs/price_scenarios.csv", sep=";", index_col=0)
-power_need_scenario_df = pd.read_csv("inputs/power_system_need_scenarios.csv", sep=",", index_col=0)
+power_need_scenario_df = pd.read_csv(
+    "inputs/power_system_need_scenarios.csv", sep=",", index_col=0
+)
+
 
 def imbalance_generator(
-        seed : int = 42,
-        deficit_probability : float = 0.5, 
-        export : bool = False
-    ):
+    seed: int = 42, deficit_probability: float = 0.5, export: bool = False
+):
     """
-    Generate a series of 24 random binary (two-state) variables, 
+    Generate a series of 24 random binary (two-state) variables,
     indicating in every hour of the next day, whether the system in the balancing stage will have a deficit in power supply or an excess.
 
     Parameters:
@@ -28,24 +29,25 @@ def imbalance_generator(
     nbHour = 24
     nbScenarios = 3
 
-    power_needed = pd.DataFrame(index=range(0,nbHour))
+    power_needed = pd.DataFrame(index=range(0, nbHour))
 
-    for i in range(1,nbScenarios+1):
+    for i in range(1, nbScenarios + 1):
         state = (np.random.rand(nbHour) > deficit_probability).astype(int)
         power_needed[i] = state
 
     if export:
         print("Power need scenarios have been generated and are getting exported")
-        csv_filename = 'inputs/power_system_need_scenarios.csv'
+        csv_filename = "inputs/power_system_need_scenarios.csv"
         power_needed.to_csv(csv_filename, index=True)
 
-    else: 
+    else:
         return power_needed
+
 
 def scenarios_generator() -> list:
     """
     Generate a list of scenarios based on wind production, price, and power system need.
-    
+
     Returns:
     - scenario_list (list): List containing DataFrames. Each element represent a scenario.
     """
@@ -58,17 +60,20 @@ def scenarios_generator() -> list:
 
             for power_need in power_need_scenario_df.columns:
 
-                combined_df = pd.DataFrame({
-                    'Wind production': wind_scenario_df[wind_scenario].values,
-                    'Price DA': price_scenario_df[price_scenario].values,
-                    'Power system need': power_need_scenario_df[power_need].values
-                })
+                combined_df = pd.DataFrame(
+                    {
+                        "Wind production": wind_scenario_df[wind_scenario].values,
+                        "Price DA": price_scenario_df[price_scenario].values,
+                        "Power system need": power_need_scenario_df[power_need].values,
+                    }
+                )
 
                 scenarios.append(combined_df)
 
     return scenarios
 
-def scenarios_selection_250(seed:int=42) -> tuple:
+
+def scenarios_selection_250(seed: int = 42) -> tuple:
     """
     Select 250 scenarios randomly from the generated scenarios list.
 
@@ -92,5 +97,5 @@ def scenarios_selection_250(seed:int=42) -> tuple:
 
 
 if __name__ == "__main__":
-     
+
     imbalance_generator(export=True)

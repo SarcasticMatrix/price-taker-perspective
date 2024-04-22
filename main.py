@@ -11,4 +11,3 @@ print(model.status)
 
 expected_profit = conduct_analysis(m=model, scenarios=scenarios)
 print("Expected Profit:", expected_profit)
-
