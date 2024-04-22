@@ -4,9 +4,7 @@ import random
 
 wind_scenario_df = pd.read_csv("inputs/scen_zone1.csv", sep=";", index_col=0)
 price_scenario_df = pd.read_csv("inputs/price_scenarios.csv", sep=";", index_col=0)
-power_need_scenario_df = pd.read_csv(
-    "inputs/power_system_need_scenarios.csv", sep=",", index_col=0
-)
+power_need_scenario_df = pd.read_csv("inputs/power_system_need_scenarios.csv", sep=",", index_col=0)
 
 
 def imbalance_generator(
