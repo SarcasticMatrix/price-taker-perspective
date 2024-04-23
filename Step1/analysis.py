@@ -20,6 +20,29 @@ def export_results(model: gp.Model):
     # Export results to JSON
     with open("result.json", "w") as f:
         json.dump(name_to_value, f, indent=1)
+    
+def compute_profit(
+        scenarios: list,
+        m: gp.Model
+):
+    # Retrieve production DA values
+    production_DA = [var.X for var in m.getVars() if "Power generation for 24 hours" in var.VarName]
+    production_DA = np.hstack((production_DA, production_DA[-1]))
+
+    # Retrieve price DA values
+    price_DA = np.array([scenarios[i]["Price DA"].values for i in range(len(scenarios))])
+    price_DA = np.transpose(price_DA)
+    
+    profits = []
+    for w in range(len(scenarios)):
+        profit_w = sum(price_DA[t, w] * production_DA[t] for t in range(24))
+        profits.append(profit_w)
+    profits = np.array(profits)
+    expected_profit = np.mean(profits)
+    standard_deviation_profit = np.std(profits, ddof=1)
+
+    return expected_profit, standard_deviation_profit
+
 
 def conduct_analysis(
         scenarios: list, 
@@ -131,13 +154,13 @@ def conduct_analysis(
         profits.append(profit_w)
     profits = np.array(profits)
     expected_profit = np.mean(profits)
-    standard_deviation = np.std(profits, ddof=1)
+    standard_deviation_profit = np.std(profits, ddof=1)
 
     plt.figure()
     plt.hist(profits/10**3, bins=20, edgecolor='None', color='red', alpha=0.3)
     plt.hist(profits/10**3, bins=20, edgecolor="black", facecolor='None')
     plt.axvline(expected_profit/10**3, color='purple', label='Expected profit')
-    plt.title(f"Profit Distribution Over Scenarios - Expected profit {round(expected_profit)} and its standard deviation {round(standard_deviation)}")
+    plt.title(f"Profit Distribution Over Scenarios - Expected profit {round(expected_profit)} and its standard deviation {round(standard_deviation_profit)}")
     plt.xlabel("Profit (k€)")
     plt.minorticks_on()
     plt.ylabel("Frequency")
@@ -146,4 +169,4 @@ def conduct_analysis(
     plt.grid(which='minor', visible=False)
     plt.show()
 
-    return expected_profit, standard_deviation
+    return expected_profit, standard_deviation_profit

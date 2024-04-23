@@ -20,7 +20,6 @@ def onePriceBalancingScheme(
     Outputs:
     - m (gp.Model): optimized model
     """
-    # random.seed(seed)
 
     # Create a new model
     m = gp.Model("Offering Strategy Under a One-Price Balancing Scheme")
