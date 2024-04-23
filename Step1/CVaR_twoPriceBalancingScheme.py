@@ -2,16 +2,16 @@ import gurobipy as gp
 from gurobipy import GRB
 import numpy as np
 
-from Step1.onePriceBalancingScheme import onePriceBalancingScheme
+from Step1.twoPriceBalancingScheme import twoPriceBalancingScheme
 
-def CVaR_onePriceBalancingScheme(
+def CVaR_twoPriceBalancingScheme(
         scenarios: list, beta: float = 0.5, alpha: float = 0.5, seed: int = 42
 ) -> gp.Model:
     
     if not 0 <= beta <= 1 or not 0 <= alpha <= 1:
         raise ValueError("beta and alpha must be in [0,1].")
 
-    model = onePriceBalancingScheme(scenarios=scenarios, seed=seed, optimise=False)
+    model = twoPriceBalancingScheme(scenarios=scenarios, seed=seed, optimise=False)
 
     ### Forecasts inputs 
 
@@ -28,8 +28,11 @@ def CVaR_onePriceBalancingScheme(
 
     production_DA = [var for var in model.getVars() if "Power generation for 24 hours" in var.VarName]
 
-    delta = [var for var in model.getVars() if "Forecast deviation for 24 hours for 250 scenarios" in var.VarName]
-    delta = np.array(delta).reshape(24, len(scenarios))
+    delta_up = [var for var in model.getVars() if "Upward forecast deviation for 24 hours for 250 scenarios" in var.VarName]
+    delta_up = np.array(delta_up).reshape(24, len(scenarios))
+
+    delta_down = [var for var in model.getVars() if "Downward forecast deviation for 24 hours for 250 scenarios" in var.VarName]
+    delta_down = np.array(delta_down).reshape(24, len(scenarios))
     
     ### Add new decision Variables
 
@@ -54,8 +57,9 @@ def CVaR_onePriceBalancingScheme(
     model.addConstrs(
         (
         - sum(
-                price_DA[t, w] * production_DA[t]+ (1 - power_needed[t, w]) * 0.9 * price_DA[t, w] * delta[t, w] 
-                + power_needed[t, w] * 1.2 * price_DA[t, w] * delta[t, w]
+                price_DA[t,w] * production_DA[t]
+                + (1 - power_needed[t,w]) * price_DA[t,w] * (0.9 * delta_up[t,w] - delta_down[t,w])
+                + power_needed[t,w] * price_DA[t,w] * (delta_up[t,w] - 1.2 * delta_down[t,w])
                 for t in range(24)
             )
         + zeta - eta[w]  <= 0

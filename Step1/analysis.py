@@ -91,8 +91,8 @@ def conduct_analysis(
     ax1.step(time, production_DA, label=r"$p_{t}^{DA}$", where="post", color="red")
     ax1.set_title(r"DA offered production $p_t^{DA}$ and wind power forecast $p_{t,w}^{real}$")
     ax1.set_ylabel("Power [MW]")
-    ax1.grid(visible=True,which="both",linestyle="--",color="gray",linewidth=0.5,alpha=0.8,)
-    ax1.grid(which="minor", alpha=0.5)
+    ax1.grid(visible=True,which="major",linestyle="--", dashes=(5, 10), color="gray",linewidth=0.5,alpha=0.8)
+    ax1.grid(which='minor', visible=False)
     ax1.legend()
 
     ########################################################################################################
@@ -105,8 +105,8 @@ def conduct_analysis(
     ax2.step(np.nan,np.nan,color="blue",linestyle="solid",label=r"$\Delta_{t,w}$",linewidth=0.7,)
     ax2.set_title(r"Planned power deviation from forecasts $\Delta_{t,w}$")
     ax2.set_ylabel("Power [MW]")
-    ax2.grid(visible=True,which="both",linestyle="--",color="gray",linewidth=0.5,alpha=0.8,)
-    ax2.grid(which="minor", alpha=0.5)
+    ax2.grid(visible=True,which="major",linestyle="--", dashes=(5, 10), color="gray",linewidth=0.5,alpha=0.8)
+    ax2.grid(which='minor', visible=False)
     ax2.legend()
 
     ########################################################################################################
@@ -123,8 +123,8 @@ def conduct_analysis(
     ax3.set_xlabel("Hours")
     ax3.set_yticks([0,1],['Excess', 'Deficit'])
     #ax3.set_ylabel("Excess or Deficit")
-    ax3.grid(visible=True,which="both",linestyle="--",color="gray",linewidth=0.5,alpha=0.8,)
-    ax3.grid(which="minor", alpha=0.5)
+    ax3.grid(visible=True,which="major",linestyle="--", dashes=(5, 10), color="gray",linewidth=0.5,alpha=0.8)
+    ax3.grid(which='minor', visible=False)
     ax3.legend()    
 
     # plt.suptitle("Hourly offered production in the day-ahead market", fontweight='bold')
@@ -152,7 +152,8 @@ def conduct_analysis(
     plt.minorticks_on()
     plt.ylabel("Frequency")
     plt.legend()
-    plt.grid(True)
+    plt.grid(visible=True, which="major", linestyle="--", dashes=(5, 10), color="gray", linewidth=0.5, alpha=0.8)
+    plt.grid(which='minor', visible=False)
     plt.show()
 
     return expected_profit

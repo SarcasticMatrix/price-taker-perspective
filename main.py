@@ -1,21 +1,21 @@
-from inputs.scenario_generator import scenarios_selection
-from Step1.onePriceBalancingScheme import onePriceBalancingScheme
-from Step1.twoPriceBalancingScheme import twoPriceBalancingScheme
 from Step1.analysis import conduct_analysis 
 
-in_sample_scenarios, out_sample_scenarios = scenarios_selection()
+from inputs.scenario_generator import scenarios_selection
+in_sample_scenarios, out_sample_scenarios = scenarios_selection(seed=41)
 
 ########################################################################################################
 ###### Optimisation
 ########################################################################################################
 
 ### One Price Balancing Scheme
-model = onePriceBalancingScheme(scenarios=in_sample_scenarios, export=False)
+from Step1.onePriceBalancingScheme import onePriceBalancingScheme as OPBS
+model = OPBS(scenarios=in_sample_scenarios, export=False)
 expected_profit = conduct_analysis(m=model, scenarios=in_sample_scenarios, balancingScheme='one')
 print("Expected Profit:", expected_profit)
 
 ### Two Price Balancing Scheme
-model = twoPriceBalancingScheme(scenarios=in_sample_scenarios, export=True)
+from Step1.twoPriceBalancingScheme import twoPriceBalancingScheme as TPBS
+model = TPBS(scenarios=in_sample_scenarios, export=True)
 expected_profit = conduct_analysis(m=model, scenarios=in_sample_scenarios)
 print("Expected Profit:", expected_profit)
 
@@ -24,11 +24,13 @@ print("Expected Profit:", expected_profit)
 ########################################################################################################
 
 ### One Price Balancing Scheme
-model = onePriceBalancingScheme(scenarios=in_sample_scenarios, export=False)
-expected_profit = conduct_analysis(m=model, scenarios=in_sample_scenarios, balancingScheme='one')
+from Step1.CVaRModels import CVaR_onePriceBalancingScheme as CVaR_OPBS
+model = CVaR_OPBS(alpha=0.05, beta=1, scenarios=in_sample_scenarios)
+expected_profit = conduct_analysis(m=model, scenarios=in_sample_scenarios, balancingScheme='two')
 print("Expected Profit:", expected_profit)
 
-### Two Price Balancing Scheme
-model = twoPriceBalancingScheme(scenarios=in_sample_scenarios, export=True)
-expected_profit = conduct_analysis(m=model, scenarios=in_sample_scenarios)
+## Two Price Balancing Scheme
+from Step1.CVaRModels import CVaR_twoPriceBalancingScheme as CVaR_TPBS
+model = CVaR_TPBS(alpha=0.05, beta=1, scenarios=in_sample_scenarios)
+expected_profit = conduct_analysis(m=model, scenarios=in_sample_scenarios, balancingScheme='two')
 print("Expected Profit:", expected_profit)

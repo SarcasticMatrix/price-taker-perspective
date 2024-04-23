@@ -3,7 +3,7 @@ from gurobipy import GRB
 import numpy as np
 import random
 
-from analysis import export_results
+from Step1.analysis import export_results
 
 
 def twoPriceBalancingScheme(
@@ -101,4 +101,6 @@ def twoPriceBalancingScheme(
         elif m.status != 2 and export:
             print("Model have not converged - impossible to export results to json")
     else:
-        return m
+        m.update()
+        
+    return m
