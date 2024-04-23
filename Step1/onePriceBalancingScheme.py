@@ -107,7 +107,8 @@ def conduct_analysis(scenarios: list, m: gp.Model):
     - expected_profit (float): Expected profit
     """
 
-    production_DA = m.getAttr("X", m.getVars())[0:24]
+    # production_DA = m.getAttr("X", m.getVars())[0:24]
+    production_DA = [var.X for var in m.getVars() if "Power generation for 24 hours" in var.VarName]
     production_DA = np.hstack((production_DA, production_DA[-1]))
     price_DA = np.array(
         [scenarios[i]["Price DA"].values for i in range(len(scenarios))]
@@ -115,7 +116,8 @@ def conduct_analysis(scenarios: list, m: gp.Model):
     price_DA = np.transpose(price_DA)
 
     ### Delta_{t,w}
-    delta = m.getAttr("X", m.getVars())[24:]
+    # delta = m.getAttr("X", m.getVars())[24:]
+    delta = [var.X for var in m.getVars() if "Forecast deviation for 24 hours for 250 scenarios" in var.VarName]
     delta = np.array(delta).reshape(24, 250).T
     delta = np.sort(delta, 0)
     delta_max = delta[-1, :]
@@ -124,12 +126,6 @@ def conduct_analysis(scenarios: list, m: gp.Model):
     delta_mean = np.hstack((delta_mean, delta_mean[-1]))
     delta_min = delta[0, :]
     delta_min = np.hstack((delta_min, delta_min[-1]))
-
-    profits = []
-    for w in range(len(scenarios)):
-        profit_w = sum(price_DA[t, w] * production_DA[t] for t in range(24))
-        profits.append(profit_w)
-    expected_profit = np.mean(profits)
 
     P_nominal = 200
     wind_production_forecast = P_nominal * np.array(
@@ -202,11 +198,24 @@ def conduct_analysis(scenarios: list, m: gp.Model):
     plt.show()
 
     # Profit plot
+    
+    profits = []
+    for w in range(len(scenarios)):
+        profit_w = sum(price_DA[t, w] * production_DA[t] for t in range(24))
+        profits.append(profit_w)
+    profits = np.array(profits)
+    expected_profit = np.mean(profits)
+    standard_deviation = np.std(profits, ddof=1)
+
     plt.figure()
-    plt.hist(profits, bins=20, color="skyblue", edgecolor="black", alpha=0.7)
-    plt.title(f"Profit Distribution Over Scenarios - Expected profit {expected_profit}")
-    plt.xlabel("Profit")
+    plt.hist(profits/10**3, bins=20, edgecolor='None', color='red', alpha=0.3)
+    plt.hist(profits/10**3, bins=20, edgecolor="black", facecolor='None')
+    plt.axvline(expected_profit/10**3, color='purple', label='Expected profit')
+    plt.title(f"Profit Distribution Over Scenarios - Expected profit {round(expected_profit)} and its standard deviation {round(standard_deviation)}")
+    plt.xlabel("Profit (k€)")
+    plt.minorticks_on()
     plt.ylabel("Frequency")
+    plt.legend()
     plt.grid(True)
     plt.show()
 
