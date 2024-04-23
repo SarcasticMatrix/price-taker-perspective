@@ -71,7 +71,7 @@ def scenarios_generator() -> list:
     return scenarios
 
 
-def scenarios_selection_250(seed: int = 42) -> tuple:
+def scenarios_selection(seed: int = 42, nbr_scenarios: int = 250) -> tuple:
     """
     Select 250 scenarios randomly from the generated scenarios list.
 
@@ -79,8 +79,8 @@ def scenarios_selection_250(seed: int = 42) -> tuple:
     - seed (int): Seed of randomness for repeatability.
 
     Returns:
-    - scenario_list_250 (list): List containing 250 selected scenarios.
-    - scenarios_remaining (list): List containing the remaining scenarios after selection.
+    - in_sample_scenarios (list): List containing 250 selected scenarios.
+    - out_sample_scenarios (list): List containing the remaining scenarios after selection.
     """
 
     scenarios = scenarios_generator()
@@ -88,10 +88,10 @@ def scenarios_selection_250(seed: int = 42) -> tuple:
     random.seed(seed)
     random.shuffle(scenarios)
 
-    scenarios_250 = scenarios[0:250]
-    scenarios_remaining = scenarios[250:]
+    in_sample_scenarios = scenarios[0:nbr_scenarios]
+    out_sample_scenarios = scenarios[nbr_scenarios:]
 
-    return scenarios_250, scenarios_remaining
+    return in_sample_scenarios, out_sample_scenarios
 
 
 if __name__ == "__main__":

@@ -2,23 +2,11 @@ import gurobipy as gp
 from gurobipy import GRB
 import numpy as np
 import random
-import json
 
-def export_results(model: gp.Model):
-    """
-    Export the retults to result.json
-    """
-
-    values = model.getAttr("X", model.getVars())
-    names = model.getAttr("VarName", model.getVars())
-    name_to_value = {name: value for name, value in zip(names, values)}
-
-    with open("result.json", "w") as f:
-        json.dump(name_to_value, f, indent=1)
-
+from analysis import export_results
 
 def onePriceBalancingScheme(
-    scenarios: list, seed: int = 42, export: bool = False
+    scenarios: list, seed: int = 42, export: bool = False, optimise: bool = True
 ) -> gp.Model:
     """
     Implement model for the Offering Strategy Under a One-Price Balancing Scheme
@@ -27,7 +15,7 @@ def onePriceBalancingScheme(
     - scenarios (list of pd.dataframe): list of all the 250 scenarios, obtained from the function 'scenarios_selection_250'
 
     Ouputs:
-    - m (gp.Model): model optimise
+    - m (gp.Model): optmised model 
     """
     random.seed(seed)
 
@@ -84,13 +72,15 @@ def onePriceBalancingScheme(
         name="Delta definition with p_{t,w}^real and p_t^DA",
     )
 
-    m.optimize()
+    if optimise:
+        m.optimize()
 
-    if m.status == 2 and export:
-        export_results(m)
-    elif m.status != 2 and export:
-        print("Model have not converged - impossible to export results to json")
-    return m
+        if m.status == 2 and export:
+            export_results(m)
+        elif m.status != 2 and export:
+            print("Model have not converged - impossible to export results to json")
+    else:
+        return m
 
 
 import matplotlib.pyplot as plt
@@ -118,7 +108,7 @@ def conduct_analysis(scenarios: list, m: gp.Model):
     ### Delta_{t,w}
     # delta = m.getAttr("X", m.getVars())[24:]
     delta = [var.X for var in m.getVars() if "Forecast deviation for 24 hours for 250 scenarios" in var.VarName]
-    delta = np.array(delta).reshape(24, 250).T
+    delta = np.array(delta).reshape(24, len(scenarios)).T
     delta = np.sort(delta, 0)
     delta_max = delta[-1, :]
     delta_max = np.hstack((delta_max, delta_max[-1]))
