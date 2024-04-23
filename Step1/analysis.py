@@ -7,13 +7,17 @@ import json
 
 def export_results(model: gp.Model):
     """
-    Export the retults to result.json
-    """
+    Export the results to 'result.json'.
 
+    Inputs:
+    - model (gp.Model): Optimized model
+    """
+    # Retrieve variable values and names
     values = model.getAttr("X", model.getVars())
     names = model.getAttr("VarName", model.getVars())
     name_to_value = {name: value for name, value in zip(names, values)}
 
+    # Export results to JSON
     with open("result.json", "w") as f:
         json.dump(name_to_value, f, indent=1)
 
@@ -26,22 +30,23 @@ def conduct_analysis(
     Analyzes the results of the optimization model for the offering strategy under a one-price balancing scheme.
 
     Inputs:
-    - m (gp.Model): Optimized model returned by onePriceBalancingScheme()
+    - scenarios (list of pd.dataframe): List of scenarios
+    - m (gp.Model): Optimized model
+    - balancingScheme (Literal["one", "two"]): Type of balancing scheme ('one' or 'two')
 
     Returns:
     - expected_profit (float): Expected profit
+    - standard_deviation_profit (float) Standard deviation of profit
     """
-
-    # production_DA = m.getAttr("X", m.getVars())[0:24]
+    # Retrieve production DA values
     production_DA = [var.X for var in m.getVars() if "Power generation for 24 hours" in var.VarName]
     production_DA = np.hstack((production_DA, production_DA[-1]))
-    price_DA = np.array(
-        [scenarios[i]["Price DA"].values for i in range(len(scenarios))]
-    )
+
+    # Retrieve price DA values
+    price_DA = np.array([scenarios[i]["Price DA"].values for i in range(len(scenarios))])
     price_DA = np.transpose(price_DA)
 
-    ### Delta_{t,w}
-    # delta = m.getAttr("X", m.getVars())[24:]
+    # Retrieve delta values
     delta = [var.X for var in m.getVars() if "Forecast deviation for 24 hours for 250 scenarios" in var.VarName]
     delta = np.array(delta).reshape(24, len(scenarios)).T
     delta = np.sort(delta, 0)
@@ -52,10 +57,9 @@ def conduct_analysis(
     delta_min = delta[0, :]
     delta_min = np.hstack((delta_min, delta_min[-1]))
 
+    # Retrieve wind production forecast values
     P_nominal = 200
-    wind_production_forecast = P_nominal * np.array(
-        [scenarios[i]["Wind production"].values for i in range(len(scenarios))]
-    )
+    wind_production_forecast = P_nominal * np.array([scenarios[i]["Wind production"].values for i in range(len(scenarios))])
     wind_production_forecast = np.sort(wind_production_forecast, 0)
     wind_max = wind_production_forecast[-1, :]
     wind_max = np.hstack((wind_max, wind_max[-1]))
@@ -64,10 +68,8 @@ def conduct_analysis(
     wind_min = wind_production_forecast[0, :]
     wind_min = np.hstack((wind_min, wind_min[-1]))
 
-    power_system_need = np.array(
-        [scenarios[i]["Power system need"].values for i in range(len(scenarios))]
-    )
-    # power_system_need = np.transpose(power_system_need)
+    # Retrieve power system need values
+    power_system_need = np.array([scenarios[i]["Power system need"].values for i in range(len(scenarios))])
     power_system_need = np.sort(power_system_need, 0)
     power_system_need_max = power_system_need[-1, :]
     power_system_need_max = np.hstack((power_system_need_max, power_system_need_max[-1]))
@@ -76,14 +78,13 @@ def conduct_analysis(
     power_system_need_min = power_system_need[0, :]
     power_system_need_min = np.hstack((power_system_need_min, power_system_need_min[-1]))
     
+    # Create time array
     time = [i for i in range(25)]   
 
+    # Plotting
     fig, (ax1, ax2, ax3) = plt.subplots(3, 1, sharex=True, gridspec_kw={"height_ratios": [3, 1.5, 1.5]})
 
-    ########################################################################################################
-    ### p_{t}^{DA} 
-    ########################################################################################################
-
+    # Plot production DA and wind production forecast
     ax1.step(time, wind_max, color="purple", linestyle="dotted", where="post", linewidth=1)
     ax1.step(time, wind_mean, color="purple", linestyle="solid", where="post", linewidth=1)
     ax1.step(time, wind_min, color="purple", linestyle="dashed", where="post", linewidth=1)
@@ -95,10 +96,7 @@ def conduct_analysis(
     ax1.grid(which='minor', visible=False)
     ax1.legend()
 
-    ########################################################################################################
-    ### \Delta_{t,w}
-    ########################################################################################################
-
+    # Plot delta
     ax2.step(time, delta_max, color="blue", linestyle="dotted", where="post", linewidth=1)
     ax2.step(time, delta_mean, color="blue", linestyle="solid", where="post", linewidth=1)
     ax2.step(time, delta_min, color="blue", linestyle="dashed", where="post", linewidth=1)
@@ -109,10 +107,7 @@ def conduct_analysis(
     ax2.grid(which='minor', visible=False)
     ax2.legend()
 
-    ########################################################################################################
-    ### x_{t,w}^B
-    ########################################################################################################
-
+    # Plot power system need
     ax3.step(time, power_system_need_max, color="green", linestyle="dotted", where="post", linewidth=1)
     ax3.step(time, power_system_need_mean, color="green", linestyle="solid", where="post", linewidth=1)
     ax3.step(time, power_system_need_min, color="green", linestyle="dashed", where="post", linewidth=1)
@@ -122,19 +117,14 @@ def conduct_analysis(
     ax3.set_title(r"Power system need $x_{t,w}^B$")
     ax3.set_xlabel("Hours")
     ax3.set_yticks([0,1],['Excess', 'Deficit'])
-    #ax3.set_ylabel("Excess or Deficit")
     ax3.grid(visible=True,which="major",linestyle="--", dashes=(5, 10), color="gray",linewidth=0.5,alpha=0.8)
     ax3.grid(which='minor', visible=False)
     ax3.legend()    
 
-    # plt.suptitle("Hourly offered production in the day-ahead market", fontweight='bold')
     plt.xticks(time, [f"H{i}" for i in range(24)] + ["H0"])
     plt.show()
 
-    ########################################################################################################
-    ### Profit plot
-    ########################################################################################################
-    
+    # Plot profit distribution
     profits = []
     for w in range(len(scenarios)):
         profit_w = sum(price_DA[t, w] * production_DA[t] for t in range(24))
@@ -156,4 +146,4 @@ def conduct_analysis(
     plt.grid(which='minor', visible=False)
     plt.show()
 
-    return expected_profit
+    return expected_profit, standard_deviation

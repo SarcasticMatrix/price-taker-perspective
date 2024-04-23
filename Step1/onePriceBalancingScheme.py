@@ -13,12 +13,16 @@ def onePriceBalancingScheme(
 
     Inputs:
     - scenarios (list of pd.dataframe): list of all the 250 scenarios, obtained from the function 'scenarios_selection_250'
+    - seed (int): seed for random number generation
+    - export (bool): flag to export results to JSON
+    - optimise (bool): flag to indicate whether to perform optimization
 
-    Ouputs:
-    - m (gp.Model): optmised model 
+    Outputs:
+    - m (gp.Model): optimized model
     """
     # random.seed(seed)
 
+    # Create a new model
     m = gp.Model("Offering Strategy Under a One-Price Balancing Scheme")
 
     ### Forecast inputs and model parameters
@@ -38,14 +42,16 @@ def onePriceBalancingScheme(
     power_needed = np.transpose(power_needed)
 
     ### Variables
+    # Define variables for power generation and forecast deviation
     production_DA = m.addMVar(
-        shape=(24,), lb=0, ub=P_nominal, name="Power generation for 24 hours", vtype=GRB.CONTINUOUS,
+        shape=(24,), lb=0, ub=P_nominal, name="Power generation for 24 hours", vtype=GRB.CONTINUOUS
     )
     delta = m.addMVar(
-        shape=(24, len(scenarios)), lb= -np.inf, name="Forecast deviation for 24 hours for 250 scenarios", vtype=GRB.CONTINUOUS,
+        shape=(24, len(scenarios)), lb=-np.inf, name="Forecast deviation for 24 hours for 250 scenarios", vtype=GRB.CONTINUOUS
     )
 
     ### Objective function
+    # Set the objective function
     objective = m.setObjective(
         sum(
             sum(
@@ -62,7 +68,8 @@ def onePriceBalancingScheme(
         GRB.MAXIMIZE,
     )
 
-    ### Constraints
+    ### Constraints
+    # Define constraints on forecast deviation
     m.addConstrs(
         (
             delta[t, w] == wind_production[t, w] - production_DA[t]
@@ -72,9 +79,11 @@ def onePriceBalancingScheme(
         name="Delta definition with p_{t,w}^real and p_t^DA",
     )
 
+    # Optimize the model if specified
     if optimise:
         m.optimize()
 
+        # Export results if specified
         if m.status == 2 and export:
             export_results(m)
         elif m.status != 2 and export:
@@ -83,5 +92,3 @@ def onePriceBalancingScheme(
         m.update()
         
     return m
-
-
