@@ -2,7 +2,7 @@ import gurobipy as gp
 from gurobipy import GRB
 import numpy as np
 import random
-
+import json
 
 def export_results(model: gp.Model):
     """
@@ -12,7 +12,6 @@ def export_results(model: gp.Model):
     values = model.getAttr("X", model.getVars())
     names = model.getAttr("VarName", model.getVars())
     name_to_value = {name: value for name, value in zip(names, values)}
-    import json
 
     with open("result.json", "w") as f:
         json.dump(name_to_value, f, indent=1)
@@ -52,17 +51,10 @@ def onePriceBalancingScheme(
 
     ### Variables
     production_DA = m.addMVar(
-        shape=(24,),
-        lb=0,
-        ub=P_nominal,
-        name="Power generation for 24 hours",
-        vtype=GRB.CONTINUOUS,
+        shape=(24,), lb=0, ub=P_nominal, name="Power generation for 24 hours", vtype=GRB.CONTINUOUS,
     )
     delta = m.addMVar(
-        shape=(24, len(scenarios)),
-        lb= -np.inf,
-        name="Forecast deviation for 24 hours for 250 scenarios",
-        vtype=GRB.CONTINUOUS,
+        shape=(24, len(scenarios)), lb= -np.inf, name="Forecast deviation for 24 hours for 250 scenarios", vtype=GRB.CONTINUOUS,
     )
 
     ### Objective function
@@ -162,7 +154,6 @@ def conduct_analysis(scenarios: list, m: gp.Model):
     power_system_need_mean = np.hstack((power_system_need_mean, power_system_need_mean[-1]))
     power_system_need_min = power_system_need[0, :]
     power_system_need_min = np.hstack((power_system_need_min, power_system_need_min[-1]))
-    print(power_system_need_mean)
     
     time = [i for i in range(25)]   
 
