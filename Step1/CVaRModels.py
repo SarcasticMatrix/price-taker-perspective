@@ -22,6 +22,8 @@ def CVaR_onePriceBalancingScheme(
     """
     if not 0 <= beta <= 1 or not 0 <= alpha <= 1:
         raise ValueError("beta and alpha must be in [0,1].")
+    
+    pi = 1/len(scenarios)
 
     # Generate the optimization model
     model = onePriceBalancingScheme(scenarios=scenarios, seed=seed, optimise=False)
@@ -49,7 +51,7 @@ def CVaR_onePriceBalancingScheme(
     obj_initial = model.getObjective()
     new_obj = (1 - beta) * obj_initial
     new_obj += beta * (
-        zeta - 1 / (1-alpha) * sum(1/len(scenarios) * eta[w] for w in range(len(scenarios)) )
+        zeta - 1 / (1-alpha) * sum( pi * eta[w] for w in range(len(scenarios)) )
     )
     model.setObjective(new_obj, GRB.MAXIMIZE)
 

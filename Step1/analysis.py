@@ -20,14 +20,55 @@ def export_results(model: gp.Model):
     # Export results to JSON
     with open("result.json", "w") as f:
         json.dump(name_to_value, f, indent=1)
+
+def compute_CVaR(
+        scenarios: list,
+        model: gp.Model,
+        alpha: float = 0.05
+) -> float:
+    """
+    Compute the Conditional Value-at-Risk (CVaR), which represents the expected profit value of the worst scenarios
+    constituting $(1-\alpha) \times 100 \%$ of the profit distribution.
+
+    Parameters:
+        scenarios (list): A list of scenarios.
+        model (gp.Model): The optimized Gurobi model.
+        alpha (float): The confidence level, indicating the 100 - percentage of worst scenarios considered.
+
+    Returns:
+        float: The computed CVaR.
+    """
+
+    profits = compute_profits(scenarios, model)
+    sorted_profits = sorted(profits)
+    alpha_index = int(len(sorted_profits) * (1 - alpha)) + 1
+    smallest_profits = sorted_profits[:alpha_index]
+    CVaR = np.mean(smallest_profits)
+
+    # eta = [var.X for var in model.getVars() if "eta for 250 scenarios" in var.VarName]
+    # eta = np.array(eta)
+    # zeta = [var.X for var in model.getVars() if "zeta" in var.VarName][0]
+    # CVaR = zeta - 1/(1-alpha) * np.sum(eta) * 1/len(scenarios)
+
+    return CVaR
+
     
-def compute_profit(
+def compute_profits(
         scenarios: list,
         m: gp.Model
 ):
+    """
+    Compute the profit based on the optimized model and scenarios.
+
+    Parameters:
+        scenarios (list): A list of scenarios.
+        m (gp.Model): The optimized Gurobi model.
+
+    Returns:
+        np.array: The profits for each scenarios.
+    """
     # Retrieve production DA values
     production_DA = [var.X for var in m.getVars() if "Power generation for 24 hours" in var.VarName]
-    production_DA = np.hstack((production_DA, production_DA[-1]))
 
     # Retrieve price DA values
     price_DA = np.array([scenarios[i]["Price DA"].values for i in range(len(scenarios))])
@@ -38,10 +79,7 @@ def compute_profit(
         profit_w = sum(price_DA[t, w] * production_DA[t] for t in range(24))
         profits.append(profit_w)
     profits = np.array(profits)
-    expected_profit = np.mean(profits)
-    standard_deviation_profit = np.std(profits, ddof=1)
-
-    return expected_profit, standard_deviation_profit
+    return profits
 
 
 def conduct_analysis(
@@ -148,11 +186,7 @@ def conduct_analysis(
     plt.show()
 
     # Plot profit distribution
-    profits = []
-    for w in range(len(scenarios)):
-        profit_w = sum(price_DA[t, w] * production_DA[t] for t in range(24))
-        profits.append(profit_w)
-    profits = np.array(profits)
+    profits = compute_profits(scenarios, m)
     expected_profit = np.mean(profits)
     standard_deviation_profit = np.std(profits, ddof=1)
 
