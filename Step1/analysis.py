@@ -24,7 +24,8 @@ def export_results(model: gp.Model):
 def compute_CVaR(
         scenarios: list,
         model: gp.Model,
-        alpha: float = 0.05
+        alpha: float = 0.95,
+        balancingScheme: Literal["one", "two"] = "two"
 ) -> float:
     """
     Compute the Conditional Value-at-Risk (CVaR), which represents the expected profit value of the worst scenarios
@@ -34,12 +35,13 @@ def compute_CVaR(
         scenarios (list): A list of scenarios.
         model (gp.Model): The optimized Gurobi model.
         alpha (float): The confidence level, indicating the 100 - percentage of worst scenarios considered.
+        balancingScheme (Literal["one", "two"]): Type of balancing scheme ('one' or 'two')
 
     Returns:
         float: The computed CVaR.
     """
 
-    profits = compute_profits(scenarios, model)
+    profits = compute_profits(scenarios, model, balancingScheme)
     sorted_profits = sorted(profits)
     alpha_index = int(len(sorted_profits) * (1 - alpha)) + 1
     smallest_profits = sorted_profits[:alpha_index]
@@ -55,7 +57,8 @@ def compute_CVaR(
     
 def compute_profits(
         scenarios: list,
-        m: gp.Model
+        m: gp.Model,
+        balancingScheme: Literal["one", "two"] = "two"
 ):
     """
     Compute the profit based on the optimized model and scenarios.
@@ -63,21 +66,57 @@ def compute_profits(
     Parameters:
         scenarios (list): A list of scenarios.
         m (gp.Model): The optimized Gurobi model.
+        balancingScheme (Literal["one", "two"]): Type of balancing scheme ('one' or 'two')
+
 
     Returns:
         np.array: The profits for each scenarios.
     """
+
+    pi = 1 / len(scenarios)
     # Retrieve production DA values
     production_DA = [var.X for var in m.getVars() if "Power generation for 24 hours" in var.VarName]
 
     # Retrieve price DA values
     price_DA = np.array([scenarios[i]["Price DA"].values for i in range(len(scenarios))])
     price_DA = np.transpose(price_DA)
+
+    power_needed = np.array([scenarios[i]["Power system need"].values for i in range(len(scenarios))])
+    power_needed = np.transpose(power_needed)
+
+    if balancingScheme == "one":
+        delta = [var.X for var in m.getVars() if "Forecast deviation for 24 hours for 250 scenarios" in var.VarName]
+        delta = np.array(delta).reshape(24, len(scenarios))
+    
+    else:
+        delta_up = [var.X for var in m.getVars() if "Upward forecast deviation for 24 hours for 250 scenarios" in var.VarName]
+        delta_up = np.array(delta_up).reshape(24, len(scenarios))
+        delta_down = [var.X for var in m.getVars() if "Downward forecast deviation for 24 hours for 250 scenarios" in var.VarName]
+        delta_down = np.array(delta_down).reshape(24, len(scenarios))
     
     profits = []
-    for w in range(len(scenarios)):
-        profit_w = sum(price_DA[t, w] * production_DA[t] for t in range(24))
-        profits.append(profit_w)
+    if balancingScheme == "one":
+        for w in range(len(scenarios)):
+            profit_w = sum((
+                        price_DA[t, w] * production_DA[t]
+                        + (1 - power_needed[t, w]) * 0.9 * price_DA[t, w] * delta[t,w]
+                        + power_needed[t, w] * 1.2 * price_DA[t, w] * delta[t,w] ) 
+                    for t in range(24)
+                )
+            profits.append(profit_w)
+
+    else:
+        for w in range(len(scenarios)):
+            profit_w = sum( 
+                    (
+                        price_DA[t,w] * production_DA[t]
+                        + (1 - power_needed[t,w]) * price_DA[t,w] * (0.9 * delta_up[t,w] - delta_down[t,w])
+                        + power_needed[t,w] * price_DA[t,w] * (delta_up[t,w] - 1.2 * delta_down[t,w])
+                )
+                for t in range(24)
+            )
+            profits.append(profit_w)
+
     profits = np.array(profits)
     return profits
 
@@ -186,7 +225,7 @@ def conduct_analysis(
     plt.show()
 
     # Plot profit distribution
-    profits = compute_profits(scenarios, m)
+    profits = compute_profits(scenarios, m, balancingScheme)
     expected_profit = np.mean(profits)
     standard_deviation_profit = np.std(profits, ddof=1)
 

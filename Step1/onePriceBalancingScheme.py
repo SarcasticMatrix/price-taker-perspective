@@ -25,7 +25,7 @@ def onePriceBalancingScheme(
     m = gp.Model("Offering Strategy Under a One-Price Balancing Scheme")
 
     ### Forecast inputs and model parameters
-    P_nominal = 200
+    P_nominal = 200 #MW
     pi = 1 / len(scenarios)
     price_DA = np.array(
         [scenarios[i]["Price DA"].values for i in range(len(scenarios))]
