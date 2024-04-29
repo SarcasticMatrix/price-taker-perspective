@@ -53,6 +53,7 @@ def CVaR_onePriceBalancingScheme(
     new_obj += beta * (
         zeta - 1 / (1-alpha) * sum( pi * eta[w] for w in range(len(scenarios)) )
     )
+    
     model.setObjective(new_obj, GRB.MAXIMIZE)
 
     ### Add new constraints
@@ -70,6 +71,14 @@ def CVaR_onePriceBalancingScheme(
     )
 
     model.optimize()
+
+    print("part 1", (1 - beta) * obj_initial.getValue())
+
+    print("part 2", beta * (
+        zeta.X - 1 / (1-alpha) * sum( pi * eta[w].X for w in range(len(scenarios)) )
+    ))
+    print("profit", obj_initial.getValue())
+    print("CVaR", zeta.X - 1 / (1-alpha) * sum( 1/len(scenarios) * eta[w].X for w in range(len(scenarios))))
     return model
 
 
@@ -139,4 +148,15 @@ def CVaR_twoPriceBalancingScheme(
     )
 
     model.optimize()
+    
+    print("part 1", (1 - beta) * obj_initial.getValue())
+    print("part 2", beta * (
+        zeta.X - 1 / (1-alpha) * sum( 1/len(scenarios) * eta[w].X for w in range(len(scenarios)) )
+    ))
+    print("profit", obj_initial.getValue())
+    print("CVaR", zeta.X - 1 / (1-alpha) * sum( 1/len(scenarios) * eta[w].X for w in range(len(scenarios))))
+    print("max cstr", max([(-sum(price_DA[t,w] * production_DA[t] +
+                    (1 - power_needed[t,w]) * price_DA[t,w] * (0.9 * delta_up[t,w] - delta_down[t,w]) 
+                    + power_needed[t,w] * price_DA[t,w] * (delta_up[t,w] - 1.2 * delta_down[t,w]) for t in range(24)) 
+                + zeta.X - eta[w]).getValue() for w in range(len(scenarios))]))
     return model

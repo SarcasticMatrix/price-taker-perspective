@@ -45,12 +45,12 @@ def compute_CVaR(
     sorted_profits = sorted(profits)
     alpha_index = int(len(sorted_profits) * (1 - alpha)) + 1
     smallest_profits = sorted_profits[:alpha_index]
-    CVaR = np.mean(smallest_profits)
+    # CVaR = np.mean(smallest_profits)
 
-    # eta = [var.X for var in model.getVars() if "eta for 250 scenarios" in var.VarName]
-    # eta = np.array(eta)
-    # zeta = [var.X for var in model.getVars() if "zeta" in var.VarName][0]
-    # CVaR = zeta - 1/(1-alpha) * np.sum(eta) * 1/len(scenarios)
+    eta = [var.X for var in model.getVars() if "eta for 250 scenarios" in var.VarName]
+    eta = np.array(eta)
+    zeta = [var.X for var in model.getVars() if "zeta" in var.VarName][0]
+    CVaR = zeta - 1/(1-alpha) * np.sum(eta) * 1/len(scenarios)
 
     return CVaR
 

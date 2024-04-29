@@ -67,7 +67,7 @@ for beta in betas:
 
 expected_profits = np.array(expected_profits) / 10**3
 CVaRs = np.array(CVaRs) / 10**3
-print(CVaRs,expected_profits)
+print("CVARS", CVaRs, "expected_profits", expected_profits)
 
 import matplotlib.pyplot as plt
 plt.figure()
