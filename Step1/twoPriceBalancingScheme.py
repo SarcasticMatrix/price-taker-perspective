@@ -49,14 +49,14 @@ def twoPriceBalancingScheme(
         shape=(24,len(scenarios)), lb=0, name="Downward forecast deviation for 24 hours for 250 scenarios", vtype=GRB.CONTINUOUS
     )
     binary = m.addMVar(
-        shape=(24,len(scenarios)),vtype=GRB.BINARY, name="binary"
+        shape=(24,len(scenarios)), vtype=GRB.BINARY, name="binary"
     )
 
     ### Objective function
     # Set the objective function
     objective = m.setObjective(
-        sum( 
-            sum(
+        gp.quicksum( 
+            gp.quicksum(
                 pi*(
                     price_DA[t,w] * production_DA[t]
                     + (1 - power_needed[t,w]) * price_DA[t,w] * (0.9 * delta_up[t,w] - delta_down[t,w])

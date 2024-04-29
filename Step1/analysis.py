@@ -97,7 +97,7 @@ def compute_profits(
     profits = []
     if balancingScheme == "one":
         for w in range(len(scenarios)):
-            profit_w = sum((
+            profit_w = gp.quicksum((
                         price_DA[t, w] * production_DA[t]
                         + (1 - power_needed[t, w]) * 0.9 * price_DA[t, w] * delta[t,w]
                         + power_needed[t, w] * 1.2 * price_DA[t, w] * delta[t,w] ) 
@@ -107,7 +107,7 @@ def compute_profits(
 
     else:
         for w in range(len(scenarios)):
-            profit_w = sum( 
+            profit_w = gp.quicksum( 
                     (
                         price_DA[t,w] * production_DA[t]
                         + (1 - power_needed[t,w]) * price_DA[t,w] * (0.9 * delta_up[t,w] - delta_down[t,w])
@@ -194,7 +194,7 @@ def conduct_analysis(
     ax1.set_ylabel("Power [MW]")
     ax1.grid(visible=True,which="major",linestyle="--", dashes=(5, 10), color="gray",linewidth=0.5,alpha=0.8)
     ax1.grid(which='minor', visible=False)
-    ax1.legend()
+    ax1.legend(loc='upper left')
 
     # Plot delta
     ax2.step(time, delta_max, color="blue", linestyle="dotted", where="post", linewidth=1)
@@ -205,7 +205,7 @@ def conduct_analysis(
     ax2.set_ylabel("Power [MW]")
     ax2.grid(visible=True,which="major",linestyle="--", dashes=(5, 10), color="gray",linewidth=0.5,alpha=0.8)
     ax2.grid(which='minor', visible=False)
-    ax2.legend()
+    ax2.legend(loc='upper left')
 
     # Plot power system need
     ax3.step(time, power_system_need_max, color="green", linestyle="dotted", where="post", linewidth=1)
@@ -219,7 +219,7 @@ def conduct_analysis(
     ax3.set_yticks([0,1],['Excess', 'Deficit'])
     ax3.grid(visible=True,which="major",linestyle="--", dashes=(5, 10), color="gray",linewidth=0.5,alpha=0.8)
     ax3.grid(which='minor', visible=False)
-    ax3.legend()    
+    ax3.legend(loc='upper left')    
 
     plt.xticks(time, [f"H{i}" for i in range(24)] + ["H0"])
     plt.show()
