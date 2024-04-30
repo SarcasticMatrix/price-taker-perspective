@@ -81,7 +81,8 @@ def onePriceBalancingScheme(
     # Optimize the model if specified
     if optimise:
         m.optimize()
-
+        print("profit mod", m.getObjective().getValue())
+        
         # Export results if specified
         if m.status == 2 and export:
             export_results(m)
@@ -89,5 +90,4 @@ def onePriceBalancingScheme(
             print("Model have not converged - impossible to export results to json")
     else:
         m.update()
-        
     return m

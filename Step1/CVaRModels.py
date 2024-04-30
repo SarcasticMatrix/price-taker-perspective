@@ -155,8 +155,8 @@ def CVaR_twoPriceBalancingScheme(
     ))
     print("profit", obj_initial.getValue())
     print("CVaR", zeta.X - 1 / (1-alpha) * sum( 1/len(scenarios) * eta[w].X for w in range(len(scenarios))))
-    print("max cstr", max([(-sum(price_DA[t,w] * production_DA[t] +
-                    (1 - power_needed[t,w]) * price_DA[t,w] * (0.9 * delta_up[t,w] - delta_down[t,w]) 
-                    + power_needed[t,w] * price_DA[t,w] * (delta_up[t,w] - 1.2 * delta_down[t,w]) for t in range(24)) 
-                + zeta.X - eta[w]).getValue() for w in range(len(scenarios))]))
+    # print("max cstr", max([(-sum(price_DA[t,w] * production_DA[t] +
+    #                 (1 - power_needed[t,w]) * price_DA[t,w] * (0.9 * delta_up[t,w] - delta_down[t,w]) 
+    #                 + power_needed[t,w] * price_DA[t,w] * (delta_up[t,w] - 1.2 * delta_down[t,w]) for t in range(24)) 
+    #             + zeta.X - eta[w]).getValue() for w in range(len(scenarios))]))
     return model

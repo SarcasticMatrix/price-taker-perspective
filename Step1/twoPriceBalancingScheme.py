@@ -2,6 +2,7 @@ import gurobipy as gp
 from gurobipy import GRB
 import numpy as np
 import random
+import matplotlib.pyplot as plt
 
 from Step1.analysis import export_results
 
@@ -36,72 +37,119 @@ def twoPriceBalancingScheme(
 
     ### Variables
     # Define variables for power generation, forecast deviation, upward and downward forecast deviation, and binary variable
-    production_DA = m.addMVar(
-        shape=(24,), lb=0, ub=P_nominal, name="Power generation for 24 hours", vtype=GRB.CONTINUOUS
-    )
-    delta = m.addMVar(
-        shape=(24,len(scenarios)), lb=-np.inf, name="Forecast deviation for 24 hours for 250 scenarios", vtype=GRB.CONTINUOUS
-    )
-    delta_up = m.addMVar(
-        shape=(24,len(scenarios)), lb=0, name="Upward forecast deviation for 24 hours for 250 scenarios", vtype=GRB.CONTINUOUS
-    )
-    delta_down = m.addMVar(
-        shape=(24,len(scenarios)), lb=0, name="Downward forecast deviation for 24 hours for 250 scenarios", vtype=GRB.CONTINUOUS
-    )
-    binary = m.addMVar(
-        shape=(24,len(scenarios)),vtype=GRB.BINARY, name="binary"
-    )
+    production_DA = {
+        t: m.addVar(
+            lb=0, ub=P_nominal, name=f"day-ahead production at range(24) {t}"
+        )
+        for t in range(24)
+    }
 
-    ### Objective function
-    # Set the objective function
-    objective = m.setObjective(
-        sum( 
-            sum(
-                pi*(
-                    price_DA[t,w] * production_DA[t]
-                    + (1 - power_needed[t,w]) * price_DA[t,w] * (0.9 * delta_up[t,w] - delta_down[t,w])
-                    + power_needed[t,w] * price_DA[t,w] * (delta_up[t,w] - 1.2 * delta_down[t,w])
-                ) 
-                for w in range(len(scenarios))
+    delta = {
+        t: {w: m.addVar(lb=-gp.GRB.INFINITY, name=f"delta at range(24) {t}") for w in range(len(scenarios))}
+        for t in range(24)
+    }
+
+    delta_up = {
+        t: {
+            w: m.addVar(lb=0, name=f"delta_up at range(24) {t}")
+            for w in range(len(scenarios))
+        }
+        for t in range(24)
+    }
+
+    delta_down = {
+        t: {
+            w: m.addVar(lb=0, name=f"delta_down at range(24) {t}")
+            for w in range(len(scenarios))
+        }
+        for t in range(24)
+    }
+
+    y = {
+        t: {
+            w: m.addVar(lb=0, name=f"binary at range(24) {t}", vtype=GRB.BINARY)
+            for w in range(len(scenarios))
+        }
+        for t in range(24)
+    }
+    
+    # Set objective function --------------------------------------------
+    objective = gp.quicksum(
+        gp.quicksum(
+            pi
+            * (
+                price_DA[t, w] * production_DA[t]
+                + power_needed[t, w] * price_DA[t, w] * (0.9 * delta_up[t][w] - delta_down[t][w])
+                + (1 - power_needed[t, w]) * price_DA[t, w] * (delta_up[t][w] - 1.2 * delta_down[t][w])
             )
             for t in range(24)
-        ), 
-        GRB.MAXIMIZE
-    )    
+        )
+        for w in range(len(scenarios))
+    )
+    m.setObjective(objective, gp.GRB.MAXIMIZE)  # maximize social welfare
 
-    ### Constraints
-    # Define constraints on forecast deviation, upward and downward forecast deviation, and binary variable
-    m.addConstrs(
-        (delta[t,w] == wind_production[t,w] - production_DA[t]
-        for t in range(24) for w in range(len(scenarios))),
-        name="Delta definition with p_{t,w}^real and p_t^DA"
-    )
-    m.addConstrs(
-        (
-            delta[t,w] == delta_up[t,w] - delta_down[t,w]
-            for t in range(24) for w in range(len(scenarios))
-        ),
-        name="Delta definition with delta_up and delta_down"
-    )
-    m.addConstrs(
-        (
-            delta_up[t,w] <= 200 * binary[t,w]
-            for t in range(24) for w in range(len(scenarios))
-        ),
-        name="Delta_up boundary"
-    )
-    m.addConstrs(
-        (
-            delta_up[t,w] <= 200 * (1 - binary[t,w])
-            for t in range(24) for w in range(len(scenarios))
-        ),
-        name="Delta_down boundary"
-    )
+    # Add constraints to the Gurobi model -------------------------------
+    delta_value = {
+        t: {
+            w: m.addConstr(
+                delta[t][w],
+                gp.GRB.EQUAL,
+                wind_production[t, w] - production_DA[t],
+                name=f"delta value at range(24) {t}",
+            )
+            for w in range(len(scenarios))
+        }
+        for t in range(24)
+    }
+
+    delta_value_pos_neg = {
+        t: {
+            w: m.addConstr(
+                delta[t][w],
+                gp.GRB.EQUAL,
+                delta_up[t][w] - delta_down[t][w],
+                name=f"delta pos-neg value at range(24) {t}",
+            )
+            for w in range(len(scenarios))
+        }
+        for t in range(24)
+    }
+
+    delta_pos = {
+        t: {
+            w: m.addConstr(
+                delta_up[t][w],
+                gp.GRB.LESS_EQUAL,
+                P_nominal*y[t][w],
+                name=f"delta pos at range(24) {t}",
+            )
+            for w in range(len(scenarios))
+        }
+        for t in range(24)
+    }
+
+    delta_neg = {
+        t: {
+            w: m.addConstr(
+                delta_down[t][w],
+                gp.GRB.LESS_EQUAL,
+                P_nominal*(1-y[t][w]),
+                name=f"delta neg at range(24) {t}",
+            )
+            for w in range(len(scenarios))
+        }
+        for t in range(24)
+    }
     
     # Optimize the model if specified
     if optimise:
         m.optimize()
-
+        print(m.status == GRB.Status.OPTIMAL)
+        prod = [production_DA[t].X for t in range(len(production_DA))]
+        print(prod)
+        plt.plot([i for i in range(len(production_DA))], prod)
+        plt.show()
+            
         # Export results if specified
         if m.status == 2 and export:
             export_results(m)
@@ -109,5 +157,5 @@ def twoPriceBalancingScheme(
             print("Model have not converged - impossible to export results to json")
     else:
         m.update()
-        
-    return m
+
+    return m, objective, production_DA, delta
