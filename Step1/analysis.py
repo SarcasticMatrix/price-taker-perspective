@@ -45,12 +45,12 @@ def compute_CVaR(
     sorted_profits = sorted(profits)
     alpha_index = int(len(sorted_profits) * (1 - alpha)) + 1
     smallest_profits = sorted_profits[:alpha_index]
-    # CVaR = np.mean(smallest_profits)
+    CVaR = np.mean(smallest_profits)
 
-    eta = [var.X for var in model.getVars() if "eta for 250 scenarios" in var.VarName]
-    eta = np.array(eta)
-    zeta = [var.X for var in model.getVars() if "zeta" in var.VarName][0]
-    CVaR = zeta - 1/(1-alpha) * np.sum(eta) * 1/len(scenarios)
+    # eta = [var.X for var in model.getVars() if "eta for 250 scenarios" in var.VarName]
+    # eta = np.array(eta)
+    # zeta = [var.X for var in model.getVars() if "zeta" in var.VarName][0]
+    # CVaR = zeta - 1/(1-alpha) * np.sum(eta) * 1/len(scenarios)
 
     return CVaR
 
@@ -58,7 +58,8 @@ def compute_CVaR(
 def compute_profits(
         scenarios: list,
         m: gp.Model,
-        balancingScheme: Literal["one", "two"] = "two"
+        balancingScheme: Literal["one", "two"] = "two",
+        nbr_scenarios = 250
 ):
     """
     Compute the profit based on the optimized model and scenarios.
@@ -73,30 +74,29 @@ def compute_profits(
         np.array: The profits for each scenarios.
     """
 
-    pi = 1 / len(scenarios)
     # Retrieve production DA values
     production_DA = [var.X for var in m.getVars() if "Power generation for 24 hours" in var.VarName]
 
     # Retrieve price DA values
-    price_DA = np.array([scenarios[i]["Price DA"].values for i in range(len(scenarios))])
+    price_DA = np.array([scenarios[i]["Price DA"].values for i in range(nbr_scenarios)])
     price_DA = np.transpose(price_DA)
 
-    power_needed = np.array([scenarios[i]["Power system need"].values for i in range(len(scenarios))])
+    power_needed = np.array([scenarios[i]["Power system need"].values for i in range(nbr_scenarios)])
     power_needed = np.transpose(power_needed)
 
     if balancingScheme == "one":
         delta = [var.X for var in m.getVars() if "Forecast deviation for 24 hours for 250 scenarios" in var.VarName]
-        delta = np.array(delta).reshape(24, len(scenarios))
+        delta = np.array(delta).reshape(24, nbr_scenarios)
     
     else:
         delta_up = [var.X for var in m.getVars() if "Upward forecast deviation for 24 hours for 250 scenarios" in var.VarName]
-        delta_up = np.array(delta_up).reshape(24, len(scenarios))
+        delta_up = np.array(delta_up).reshape(24, nbr_scenarios)
         delta_down = [var.X for var in m.getVars() if "Downward forecast deviation for 24 hours for 250 scenarios" in var.VarName]
-        delta_down = np.array(delta_down).reshape(24, len(scenarios))
+        delta_down = np.array(delta_down).reshape(24, nbr_scenarios)
     
     profits = []
     if balancingScheme == "one":
-        for w in range(len(scenarios)):
+        for w in range(nbr_scenarios):
             profit_w = sum((
                         price_DA[t, w] * production_DA[t]
                         + (1 - power_needed[t, w]) * 0.9 * price_DA[t, w] * delta[t,w]
@@ -106,7 +106,7 @@ def compute_profits(
             profits.append(profit_w)
 
     else:
-        for w in range(len(scenarios)):
+        for w in range(nbr_scenarios):
             profit_w = sum( 
                     (
                         price_DA[t,w] * production_DA[t]
@@ -194,7 +194,7 @@ def conduct_analysis(
     ax1.set_ylabel("Power [MW]")
     ax1.grid(visible=True,which="major",linestyle="--", dashes=(5, 10), color="gray",linewidth=0.5,alpha=0.8)
     ax1.grid(which='minor', visible=False)
-    ax1.legend()
+    ax1.legend(loc='upper left')
 
     # Plot delta
     ax2.step(time, delta_max, color="blue", linestyle="dotted", where="post", linewidth=1)
@@ -205,7 +205,7 @@ def conduct_analysis(
     ax2.set_ylabel("Power [MW]")
     ax2.grid(visible=True,which="major",linestyle="--", dashes=(5, 10), color="gray",linewidth=0.5,alpha=0.8)
     ax2.grid(which='minor', visible=False)
-    ax2.legend()
+    ax2.legend(loc='upper left')
 
     # Plot power system need
     ax3.step(time, power_system_need_max, color="green", linestyle="dotted", where="post", linewidth=1)
@@ -219,7 +219,7 @@ def conduct_analysis(
     ax3.set_yticks([0,1],['Excess', 'Deficit'])
     ax3.grid(visible=True,which="major",linestyle="--", dashes=(5, 10), color="gray",linewidth=0.5,alpha=0.8)
     ax3.grid(which='minor', visible=False)
-    ax3.legend()    
+    ax3.legend(loc='upper left')    
 
     plt.xticks(time, [f"H{i}" for i in range(24)] + ["H0"])
     plt.show()
