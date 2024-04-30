@@ -79,8 +79,8 @@ def twoPriceBalancingScheme(
             pi
             * (
                 price_DA[t, w] * production_DA[t]
-                + power_needed[t, w] * price_DA[t, w] * (0.9 * delta_up[t][w] - delta_down[t][w])
-                + (1 - power_needed[t, w]) * price_DA[t, w] * (delta_up[t][w] - 1.2 * delta_down[t][w])
+                + (1 - power_needed[t, w]) * price_DA[t, w] * (0.9 * delta_up[t][w] - delta_down[t][w])
+                + (power_needed[t, w]) * price_DA[t, w] * (delta_up[t][w] - 1.2 * delta_down[t][w])
             )
             for t in range(24)
         )
@@ -159,4 +159,4 @@ def twoPriceBalancingScheme(
     else:
         m.update()
 
-    return m, objective, production_DA, delta
+    return m, objective, production_DA, delta, delta_up, delta_down
