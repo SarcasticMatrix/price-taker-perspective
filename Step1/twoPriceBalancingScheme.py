@@ -27,53 +27,53 @@ def twoPriceBalancingScheme(
 
     ### Forecast inputs and model parameters
     P_nominal = 200
-    pi = 1 / len(scenarios)
-    price_DA = np.array([scenarios[i]['Price DA'].values for i in range(len(scenarios))])
+    nb_scenarios = len(scenarios)
+    pi = 1 / nb_scenarios
+    price_DA = np.array([scenarios[i]['Price DA'].values for i in range(nb_scenarios)])
     price_DA = np.transpose(price_DA)
-    wind_production = P_nominal * np.array([scenarios[i]['Wind production'].values for i in range(len(scenarios))])
+    wind_production = P_nominal * np.array([scenarios[i]['Wind production'].values for i in range(nb_scenarios)])
     wind_production = np.transpose(wind_production)
-    power_needed = np.array([scenarios[i]['Power system need'].values for i in range(len(scenarios))])
+    power_needed = np.array([scenarios[i]['Power system need'].values for i in range(nb_scenarios)])
     power_needed = np.transpose(power_needed)
 
     ### Variables
     # Define variables for power generation, forecast deviation, upward and downward forecast deviation, and binary variable
     production_DA = {
-        t: m.addVar(
-            lb=0, ub=P_nominal, name=f"day-ahead production at range(24) {t}"
-        )
+        t: m.addVar(lb=0, ub=P_nominal, name=f"DA power generation at time {t}.")
         for t in range(24)
     }
 
     delta = {
-        t: {w: m.addVar(lb=-gp.GRB.INFINITY, name=f"delta at range(24) {t}") for w in range(len(scenarios))}
+        t: {w: m.addVar(lb=-gp.GRB.INFINITY, name=f"Forecast deviation at time {t} for scenario {w}.") for w in range(nb_scenarios)}
         for t in range(24)
     }
 
     delta_up = {
         t: {
-            w: m.addVar(lb=0, name=f"delta_up at range(24) {t}")
-            for w in range(len(scenarios))
+            w: m.addVar(lb=0, name=f"Upward forecast deviation at time {t} for scenario {w}.")
+            for w in range(nb_scenarios)
         }
         for t in range(24)
     }
 
     delta_down = {
         t: {
-            w: m.addVar(lb=0, name=f"delta_down at range(24) {t}")
-            for w in range(len(scenarios))
+            w: m.addVar(lb=0, name=f"Downward forecast deviation at time {t} for scenario {w}.")
+            for w in range(nb_scenarios)
         }
         for t in range(24)
     }
 
-    y = {
+    binary = {
         t: {
-            w: m.addVar(lb=0, name=f"binary at range(24) {t}", vtype=GRB.BINARY)
-            for w in range(len(scenarios))
+            w: m.addVar(lb=0, name=f"binary at time {t} for scenario {w}.", vtype=GRB.BINARY)
+            for w in range(nb_scenarios)
         }
         for t in range(24)
     }
     
-    # Set objective function --------------------------------------------
+    ### Objective function
+    # Set the objective function
     objective = gp.quicksum(
         gp.quicksum(
             pi
@@ -84,20 +84,21 @@ def twoPriceBalancingScheme(
             )
             for t in range(24)
         )
-        for w in range(len(scenarios))
+        for w in range(nb_scenarios)
     )
-    m.setObjective(objective, gp.GRB.MAXIMIZE)  # maximize social welfare
+    m.setObjective(objective, gp.GRB.MAXIMIZE) 
 
-    # Add constraints to the Gurobi model -------------------------------
+    ### Constraints
+    # Define constraints on forecast deviation
     delta_value = {
         t: {
             w: m.addConstr(
                 delta[t][w],
                 gp.GRB.EQUAL,
                 wind_production[t, w] - production_DA[t],
-                name=f"delta value at range(24) {t}",
+                name=f"Delta definition with p_{t,w}^real and p_{t}^DA",
             )
-            for w in range(len(scenarios))
+            for w in range(nb_scenarios)
         }
         for t in range(24)
     }
@@ -108,35 +109,35 @@ def twoPriceBalancingScheme(
                 delta[t][w],
                 gp.GRB.EQUAL,
                 delta_up[t][w] - delta_down[t][w],
-                name=f"delta pos-neg value at range(24) {t}",
+                name=f"Delta definition with delta_up and delta_down at time {t} for scenario {w}.",
             )
-            for w in range(len(scenarios))
+            for w in range(nb_scenarios)
         }
         for t in range(24)
     }
 
-    delta_pos = {
+    delta_up_boundary = {
         t: {
             w: m.addConstr(
                 delta_up[t][w],
                 gp.GRB.LESS_EQUAL,
-                P_nominal*y[t][w],
-                name=f"delta pos at range(24) {t}",
+                P_nominal*binary[t][w],
+                name=f"delta_up boundary at time {t} for scenario {w}.",
             )
-            for w in range(len(scenarios))
+            for w in range(nb_scenarios)
         }
         for t in range(24)
     }
 
-    delta_neg = {
+    delta_down_boundary = {
         t: {
             w: m.addConstr(
                 delta_down[t][w],
                 gp.GRB.LESS_EQUAL,
-                P_nominal*(1-y[t][w]),
-                name=f"delta neg at range(24) {t}",
+                P_nominal*(1-binary[t][w]),
+                name=f"delta_down boundary at time {t} for scenario {w}.",
             )
-            for w in range(len(scenarios))
+            for w in range(nb_scenarios)
         }
         for t in range(24)
     }
@@ -149,7 +150,7 @@ def twoPriceBalancingScheme(
         print(prod)
         plt.plot([i for i in range(len(production_DA))], prod)
         plt.show()
-            
+
         # Export results if specified
         if m.status == 2 and export:
             export_results(m)

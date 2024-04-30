@@ -75,8 +75,11 @@ def compute_profits(
     """
 
     # Retrieve production DA values
-    production_DA = [var.X for var in m.getVars() if "Power generation for 24 hours" in var.VarName]
-
+    if balancingScheme == "one":
+        production_DA = [var.X for var in m.getVars() if "Power generation for 24 hours" in var.VarName]
+    else:
+        production_DA = [[var.X for var in m.getVars() if f"DA power generation at time {t}." in var.VarName] for t in range(24)]
+        
     # Retrieve price DA values
     price_DA = np.array([scenarios[i]["Price DA"].values for i in range(nbr_scenarios)])
     price_DA = np.transpose(price_DA)
@@ -89,10 +92,12 @@ def compute_profits(
         delta = np.array(delta).reshape(24, nbr_scenarios)
     
     else:
-        delta_up = [var.X for var in m.getVars() if "Upward forecast deviation for 24 hours for 250 scenarios" in var.VarName]
-        delta_up = np.array(delta_up).reshape(24, nbr_scenarios)
-        delta_down = [var.X for var in m.getVars() if "Downward forecast deviation for 24 hours for 250 scenarios" in var.VarName]
-        delta_down = np.array(delta_down).reshape(24, nbr_scenarios)
+        delta_up = [
+            [var.X for w in range(nbr_scenarios) for var in m.getVars() if f"Upward forecast deviation at time {t} for scenario {w}." in var.VarName]
+            for t in range(24)]
+        delta_down = [
+            [var.X  for w in range(nbr_scenarios) for var in m.getVars() if f"Downward forecast deviation at time {t} for scenario {w}." in var.VarName]
+            for t in range(24)]
     
     profits = []
     if balancingScheme == "one":
@@ -139,16 +144,28 @@ def conduct_analysis(
     - standard_deviation_profit (float) Standard deviation of profit
     """
     # Retrieve production DA values
-    production_DA = [var.X for var in m.getVars() if "Power generation for 24 hours" in var.VarName]
-    production_DA = np.hstack((production_DA, production_DA[-1]))
+    if balancingScheme == "one":
+        production_DA = [var.X for var in m.getVars() if "Power generation for 24 hours" in var.VarName]
+    else:
+        production_DA = [var.X for t in range(24) for var in m.getVars() if f"DA power generation at time {t}." in var.VarName]
+        print('prod', production_DA)
 
+    production_DA = np.hstack((production_DA, production_DA[-1]))    
     # Retrieve price DA values
     price_DA = np.array([scenarios[i]["Price DA"].values for i in range(len(scenarios))])
     price_DA = np.transpose(price_DA)
 
     # Retrieve delta values
-    delta = [var.X for var in m.getVars() if "Forecast deviation for 24 hours for 250 scenarios" in var.VarName]
-    delta = np.array(delta).reshape(24, len(scenarios)).T
+    if balancingScheme == "one":
+        delta = [var.X for var in m.getVars() if "Forecast deviation for 24 hours for 250 scenarios" in var.VarName]
+        delta = np.array(delta).reshape(24, len(scenarios)).T
+    else:
+        print("here")
+        delta = [
+            [var.X for w in range(len(scenarios)) for var in m.getVars() if f"Forecast deviation at time {t} for scenario {w}." in var.VarName]
+            for t in range(24)]
+        print("SHAPEE", np.shape(delta))
+        delta = np.array(delta).T
     delta = np.sort(delta, 0)
     delta_max = delta[-1, :]
     delta_max = np.hstack((delta_max, delta_max[-1]))
