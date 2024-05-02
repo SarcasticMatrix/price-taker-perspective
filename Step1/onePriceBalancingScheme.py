@@ -25,7 +25,7 @@ def onePriceBalancingScheme(
     m = gp.Model("Offering Strategy Under a One-Price Balancing Scheme")
 
     ### Forecast inputs and model parameters
-    P_nominal = 200 #MW
+    P_nominal = 200  # MW
     pi = 1 / len(scenarios)
     price_DA = np.array(
         [scenarios[i]["Price DA"].values for i in range(len(scenarios))]
@@ -43,10 +43,17 @@ def onePriceBalancingScheme(
     ### Variables
     # Define variables for power generation and forecast deviation
     production_DA = m.addMVar(
-        shape=(24,), lb=0, ub=P_nominal, name="Power generation for 24 hours", vtype=GRB.CONTINUOUS
+        shape=(24,),
+        lb=0,
+        ub=P_nominal,
+        name="Power generation for 24 hours",
+        vtype=GRB.CONTINUOUS,
     )
     delta = m.addMVar(
-        shape=(24, len(scenarios)), lb=-np.inf, name="Forecast deviation for 24 hours for 250 scenarios", vtype=GRB.CONTINUOUS
+        shape=(24, len(scenarios)),
+        lb=-np.inf,
+        name="Forecast deviation for 24 hours for 250 scenarios",
+        vtype=GRB.CONTINUOUS,
     )
 
     ### Objective function
@@ -81,8 +88,7 @@ def onePriceBalancingScheme(
     # Optimize the model if specified
     if optimise:
         m.optimize()
-        print("profit mod", m.getObjective().getValue())
-        
+
         # Export results if specified
         if m.status == 2 and export:
             export_results(m)
