@@ -20,6 +20,7 @@ def CVaR_onePriceBalancingScheme(
 
     Returns:
     - model (gp.Model): Optimized CVaR model
+    - model_var_dic (dict): dictionary of variables from the model
     """
     if not 0 <= beta <= 1 or not 0 <= alpha <= 1:
         raise ValueError("beta and alpha must be in [0,1].")
@@ -108,6 +109,7 @@ def CVaR_twoPriceBalancingScheme(
 
     Returns:
     - model (gp.Model): Optimized CVaR model
+    - model_var_dic (dict): dictionary of variables from the model
     """
     if not 0 <= beta <= 1 or not 0 <= alpha <= 1:
         raise ValueError("beta and alpha must be in [0,1].")

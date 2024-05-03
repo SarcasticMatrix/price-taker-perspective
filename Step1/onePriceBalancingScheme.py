@@ -19,6 +19,7 @@ def onePriceBalancingScheme(
 
     Outputs:
     - m (gp.Model): optimized model
+    - model_var_dic (dict): dictionary of variables from the model
     """
 
     # Create a new model
