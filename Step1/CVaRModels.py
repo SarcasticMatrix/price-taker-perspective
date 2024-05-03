@@ -24,10 +24,16 @@ def CVaR_onePriceBalancingScheme(
     if not 0 <= beta <= 1 or not 0 <= alpha <= 1:
         raise ValueError("beta and alpha must be in [0,1].")
 
+    nb_scenarios = len(scenarios)
     pi = 1 / len(scenarios)
 
     # Generate the optimization model
-    model = onePriceBalancingScheme(scenarios=scenarios, seed=seed, optimise=False)
+    model, model_var = onePriceBalancingScheme(scenarios=scenarios, seed=seed, optimise=False)
+
+    # Extract previous decision variables
+    obj_initial = model_var["Objective"]
+    production_DA = model_var["Production DA"]
+    delta = model_var["Delta"]
 
     ### Forecasts inputs
     price_DA = np.array(
@@ -39,33 +45,19 @@ def CVaR_onePriceBalancingScheme(
     )
     power_needed = np.transpose(power_needed)
 
-    ### Previous decision variables
-    production_DA = [
-        var for var in model.getVars() if "Power generation for 24 hours" in var.VarName
-    ]
-    delta = [
-        var
-        for var in model.getVars()
-        if "Forecast deviation for 24 hours for 250 scenarios" in var.VarName
-    ]
-    delta = np.array(delta).reshape(24, len(scenarios))
-
     ### Add new decision Variables
-    eta = model.addMVar(
-        shape=(len(scenarios),),
-        lb=0,
-        name="eta for 250 scenarios",
-        vtype=GRB.CONTINUOUS,
-    )
-    zeta = model.addMVar(
-        shape=(1,),
+    eta = {
+        w: model.addVar(lb=0, name=f"eta for scenario {w}.")
+        for w in range(nb_scenarios)
+    }
+
+    zeta = model.addVar(
         lb=0,
         name="zeta",
         vtype=GRB.CONTINUOUS,
     )
 
     ### New objective function
-    obj_initial = model.getObjective()
     new_obj = (1 - beta) * obj_initial
     new_obj += beta * (
         zeta - 1 / (1 - alpha) * sum(pi * eta[w] for w in range(len(scenarios)))
@@ -74,24 +66,32 @@ def CVaR_onePriceBalancingScheme(
     model.setObjective(new_obj, GRB.MAXIMIZE)
 
     ### Add new constraints
-    model.addConstrs(
-        (
+    equality_constraints_CVaR = {
+        w: model.addConstr(
             -sum(
                 price_DA[t, w] * production_DA[t]
-                + (1 - power_needed[t, w]) * 0.9 * price_DA[t, w] * delta[t, w]
-                + power_needed[t, w] * 1.2 * price_DA[t, w] * delta[t, w]
+                + (1 - power_needed[t, w]) * 0.9 * price_DA[t, w] * delta[t][w]
+                + power_needed[t, w] * 1.2 * price_DA[t, w] * delta[t][w]
                 for t in range(24)
             )
             + zeta
             - eta[w]
-            <= 0
-            for w in range(len(scenarios))
-        ),
-        name="equality constraints",
-    )
+            <= 0,
+            name=f"equality constraints for scenario {w}.",
+        )
+        for w in range(nb_scenarios)
+    }
 
     model.optimize()
-    return model
+
+    model_var_dic = {
+        "Objective": obj_initial,
+        "Production DA": production_DA,
+        "Delta": delta,
+        "Eta": eta,
+        "Zeta": zeta,
+    }
+    return model, model_var_dic
 
 
 def CVaR_twoPriceBalancingScheme(
@@ -115,14 +115,14 @@ def CVaR_twoPriceBalancingScheme(
     nb_scenarios = len(scenarios)
 
     # Generate the optimization model
-    (
-        model,
-        obj_initial,
-        production_DA,
-        delta,
-        delta_up,
-        delta_down,
-    ) = twoPriceBalancingScheme(scenarios=scenarios, seed=seed, optimise=False)
+    model, model_var = twoPriceBalancingScheme(scenarios=scenarios, seed=seed, optimise=False)
+
+    # Extract previous decision variables
+    obj_initial = model_var["Objective"]
+    production_DA = model_var["Production DA"]
+    delta = model_var["Delta"]
+    delta_up = model_var["Delta up"]
+    delta_down = model_var["Delta down"]
 
     ### Forecasts inputs
     price_DA = np.array(
@@ -179,4 +179,15 @@ def CVaR_twoPriceBalancingScheme(
     }
 
     model.optimize()
-    return model, obj_initial, production_DA, delta, delta_up, delta_down, eta, zeta
+
+    model_var_dic = {
+        "Objective": obj_initial,
+        "Production DA": production_DA,
+        "Delta": delta,
+        "Delta up": delta_up,
+        "Delta down": delta_down,
+        "Eta": eta,
+        "Zeta": zeta,
+    }
+
+    return model, model_var_dic

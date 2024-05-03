@@ -171,4 +171,12 @@ def twoPriceBalancingScheme(
     else:
         m.update()
 
-    return m, objective, production_DA, delta, delta_up, delta_down
+    model_var_dic = {
+        "Objective": objective,
+        "Production DA": production_DA,
+        "Delta": delta,
+        "Delta up": delta_up,
+        "Delta down": delta_down,
+    }
+
+    return m, model_var_dic

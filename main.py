@@ -18,14 +18,14 @@ from Step1.CVaRModels import CVaR_twoPriceBalancingScheme as CVaR_TPBS
 ########################################################################################################
 
 # ## One Price Balancing Scheme
-# model = OPBS(scenarios=in_sample_scenarios, export=False)
-# expected_profit, standard_deviation_profit = conduct_analysis(m=model, scenarios=in_sample_scenarios, balancingScheme='one')
+# model, model_var_dic = OPBS(scenarios=in_sample_scenarios, export=False)
+# expected_profit, standard_deviation_profit = conduct_analysis(m=model, model_var_dic=model_var_dic, scenarios=in_sample_scenarios, balancingScheme='one')
 # variation_coefficient  = round(standard_deviation_profit/expected_profit,2)
 # print(f"Expected profit: {round(expected_profit)}, Standard deviation: {round(standard_deviation_profit)}, variation_coefficient : {variation_coefficient }")
 
 # ### Two Price Balancing Scheme
-# model, objective, production_DA, delta, delta_up, delta_down = TPBS(scenarios=in_sample_scenarios, export=True, optimise=True)
-# expected_profit, standard_deviation_profit = conduct_analysis(m=model, scenarios=in_sample_scenarios, balancingScheme='two', production_DA_dicc=production_DA, delta_dicc=delta, delta_up_dicc=delta_up, delta_down_dicc=delta_down)
+# model, model_var_dic = TPBS(scenarios=in_sample_scenarios, export=True, optimise=True)
+# expected_profit, standard_deviation_profit = conduct_analysis(m=model, model_var_dic=model_var_dic, scenarios=in_sample_scenarios, balancingScheme='two')
 # variation_coefficient  = round(standard_deviation_profit/expected_profit,2)
 # print(f"Expected profit: {round(expected_profit)}, Standard deviation: {round(standard_deviation_profit)}, variation_coefficient : {variation_coefficient }")
 
@@ -34,14 +34,14 @@ from Step1.CVaRModels import CVaR_twoPriceBalancingScheme as CVaR_TPBS
 #######################################################################################################
 
 # ### One Price Balancing Scheme
-# model = CVaR_OPBS(alpha=0.95, beta=0.9, scenarios=in_sample_scenarios)
-# expected_profit, standard_deviation_profit = conduct_analysis(m=model, scenarios=in_sample_scenarios, balancingScheme="one")
+# model, model_var_dic = CVaR_OPBS(alpha=0.95, beta=0.9, scenarios=in_sample_scenarios)
+# expected_profit, standard_deviation_profit = conduct_analysis(m=model, model_var_dic=model_var_dic, scenarios=in_sample_scenarios, balancingScheme="one")
 # variation_coefficient  = round(standard_deviation_profit/expected_profit,2)
 # print(f"Expected profit: {round(expected_profit)}, Standard deviation: {round(standard_deviation_profit)}, variation_coefficient : {variation_coefficient }")
 
 # ### Two Price Balancing Scheme
-# model, objective, production_DA, delta, delta_up, delta_down, eta, zeta = CVaR_TPBS(alpha=0.95, beta=0.5, scenarios=in_sample_scenarios)
-# expected_profit, standard_deviation_profit = conduct_analysis(m=model, scenarios=in_sample_scenarios, balancingScheme='two', production_DA_dicc=production_DA, delta_dicc=delta, delta_up_dicc=delta_up, delta_down_dicc=delta_down)
+# model, model_var_dic = CVaR_TPBS(alpha=0.95, beta=0.5, scenarios=in_sample_scenarios)
+# expected_profit, standard_deviation_profit = conduct_analysis(m=model, model_var_dic=model_var_dic, scenarios=in_sample_scenarios, balancingScheme='two')
 # variation_coefficient  = round(standard_deviation_profit/expected_profit,2)
 # print(f"Expected profit: {round(expected_profit)}, Standard deviation: {round(standard_deviation_profit)}, variation_coefficient : {variation_coefficient }")
 
@@ -49,22 +49,23 @@ from Step1.CVaRModels import CVaR_twoPriceBalancingScheme as CVaR_TPBS
 ###### Plot of Expectde profit vs CVaR
 ########################################################################################################
 
-from Step1.analysis import expected_profit_vs_CVaR
-alphas = [0.95, 0.99]
-alphas=[0.95]
-expected_profit_vs_CVaR(scenarios=in_sample_scenarios, alphas=alphas, balancingScheme="two")
+# from Step1.analysis import expected_profit_vs_CVaR
+# alphas = [0.95, 0.99]
+# alphas=[0.95]
+# balancingScheme = "two"
+# expected_profit_vs_CVaR(scenarios=in_sample_scenarios, alphas=alphas, balancingScheme=balancingScheme)
 
 ########################################################################################################
 ###### Out-of-sample simulation
 ########################################################################################################
 
-# model = OPBS(scenarios=in_sample_scenarios, export=False)
-# profit_out_sample = compute_profits(scenarios=out_sample_scenarios, m=model, balancingScheme='one', nbr_scenarios=len(in_sample_scenarios))
+# model, model_var_dic = OPBS(scenarios=in_sample_scenarios, export=False)
+# profit_out_sample = compute_profits(scenarios=out_sample_scenarios, m=model, model_var_dic=model_var_dic, balancingScheme='one', nbr_scenarios=len(in_sample_scenarios))
 
 # expected_profit_out_sample = np.mean(profit_out_sample)
 # standard_deviation_out_profit_sample = np.std(profit_out_sample, ddof=1)
 
-# profit_in_sample = compute_profits(scenarios=in_sample_scenarios, m=model, balancingScheme='one', nbr_scenarios=len(in_sample_scenarios))
+# profit_in_sample = compute_profits(scenarios=in_sample_scenarios, m=model, model_var_dic=model_var_dic, balancingScheme='one', nbr_scenarios=len(in_sample_scenarios))
 # expected_profit_in_sample = np.mean(profit_in_sample)
 # standard_deviation_in_sample = np.std(profit_in_sample, ddof=1)
 

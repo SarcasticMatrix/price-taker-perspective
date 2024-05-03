@@ -26,14 +26,9 @@ def export_results(model: gp.Model):
 def compute_CVaR(
     scenarios: list,
     model: gp.Model,
+    model_var_dic: dict,
     alpha: float = 0.95,
     balancingScheme: Literal["one", "two"] = "two",
-    production_DA_dicc=None,
-    delta_dicc=None,
-    delta_up_dicc=None,
-    delta_down_dicc=None,
-    eta_dicc=None,
-    zeta=None,
 ) -> float:
     """
     Compute the Conditional Value-at-Risk (CVaR), which represents the expected profit value of the worst scenarios
@@ -42,6 +37,7 @@ def compute_CVaR(
     Parameters:
         scenarios (list): A list of scenarios.
         model (gp.Model): The optimized Gurobi model.
+        model_var_dic (dict): Dictionary of variables from the model.
         alpha (float): The confidence level, indicating the 100 - percentage of worst scenarios considered.
         balancingScheme (Literal["one", "two"]): Type of balancing scheme ('one' or 'two')
 
@@ -52,19 +48,18 @@ def compute_CVaR(
     profits = compute_profits(
         scenarios,
         model,
+        model_var_dic,
         balancingScheme,
-        len(scenarios),
-        production_DA_dicc,
-        delta_dicc,
-        delta_up_dicc,
-        delta_down_dicc,
+        len(scenarios)
     )
     sorted_profits = sorted(profits)
     alpha_index = int(len(sorted_profits) * (1 - alpha)) + 1
     smallest_profits = sorted_profits[:alpha_index]
     CVaR = np.mean(smallest_profits)
 
-    # eta = [eta_dicc[w].x for w in range(len(scenarios))]
+    # eta_dic = model_var_dic["Eta"]
+    # zeta = model_var_dic["Zeta"]
+    # eta = [eta_dic[w].x for w in range(len(scenarios))]
     # eta = np.array(eta)
     # zeta = zeta.x
     # CVaR = zeta - 1 / (1 - alpha) * np.sum(eta) * 1 / len(scenarios)
@@ -75,12 +70,9 @@ def compute_CVaR(
 def compute_profits(
     scenarios: list,
     m: gp.Model,
+    model_var_dic: dict,
     balancingScheme: Literal["one", "two"] = "two",
     nbr_scenarios=250,
-    production_DA_dicc=None,
-    delta_dicc=None,
-    delta_up_dicc=None,
-    delta_down_dicc=None,
 ):
     """
     Compute the profit based on the optimized model and scenarios.
@@ -88,6 +80,7 @@ def compute_profits(
     Parameters:
         scenarios (list): A list of scenarios.
         m (gp.Model): The optimized Gurobi model.
+        model_var_dic (dict): Dictionary of variables from the model
         balancingScheme (Literal["one", "two"]): Type of balancing scheme ('one' or 'two')
 
 
@@ -95,17 +88,16 @@ def compute_profits(
         np.array: The profits for each scenarios.
     """
 
-    # Retrieve production DA values
-    if balancingScheme == "one":
-        production_DA = [
-            var.X
-            for var in m.getVars()
-            if "Power generation for 24 hours" in var.VarName
-        ]
+    production_DA_dic=model_var_dic["Production DA"]
+    delta_dic=model_var_dic["Delta"]
+    if balancingScheme == "two":
+        delta_up_dic=model_var_dic["Delta up"]
+        delta_down_dic=model_var_dic["Delta down"]
     else:
-        production_DA = [production_DA_dicc[t].x for t in range(24)]
+        delta_up_dic=None
+        delta_down_dic=None
 
-    # Retrieve price DA values
+    # Retrieve the input data values
     price_DA = np.array([scenarios[i]["Price DA"].values for i in range(nbr_scenarios)])
     price_DA = np.transpose(price_DA)
 
@@ -114,20 +106,20 @@ def compute_profits(
     )
     power_needed = np.transpose(power_needed)
 
+    # Retrieve the variables values
+    production_DA = [production_DA_dic[t].x for t in range(24)]
+
     if balancingScheme == "one":
         delta = [
-            var.X
-            for var in m.getVars()
-            if "Forecast deviation for 24 hours for 250 scenarios" in var.VarName
+            [delta_dic[t][w].x for w in range(nbr_scenarios)] for t in range(24)
         ]
-        delta = np.array(delta).reshape(24, nbr_scenarios)
 
     else:
         delta_up = [
-            [delta_up_dicc[t][w].x for w in range(nbr_scenarios)] for t in range(24)
+            [delta_up_dic[t][w].x for w in range(nbr_scenarios)] for t in range(24)
         ]
         delta_down = [
-            [delta_down_dicc[t][w].x for w in range(nbr_scenarios)] for t in range(24)
+            [delta_down_dic[t][w].x for w in range(nbr_scenarios)] for t in range(24)
         ]
 
     profits = []
@@ -136,8 +128,8 @@ def compute_profits(
             profit_w = sum(
                 (
                     price_DA[t, w] * production_DA[t]
-                    + (1 - power_needed[t, w]) * 0.9 * price_DA[t, w] * delta[t, w]
-                    + power_needed[t, w] * 1.2 * price_DA[t, w] * delta[t, w]
+                    + (1 - power_needed[t, w]) * 0.9 * price_DA[t, w] * delta[t][w]
+                    + power_needed[t, w] * 1.2 * price_DA[t, w] * delta[t][w]
                 )
                 for t in range(24)
             )
@@ -162,11 +154,8 @@ def compute_profits(
 def conduct_analysis(
     scenarios: list,
     m: gp.Model,
-    balancingScheme: Literal["one", "two"] = "two",
-    production_DA_dicc=None,
-    delta_dicc=None,
-    delta_up_dicc=None,
-    delta_down_dicc=None,
+    model_var_dic: dict,
+    balancingScheme: Literal["one", "two"] = "two"
 ):
     """
     Analyzes the results of the optimization model for the offering strategy under a one-price balancing scheme.
@@ -174,23 +163,21 @@ def conduct_analysis(
     Inputs:
     - scenarios (list of pd.dataframe): List of scenarios
     - m (gp.Model): Optimized model
+    - model_var_dic (dict): Dictionary of variables from the model
     - balancingScheme (Literal["one", "two"]): Type of balancing scheme ('one' or 'two')
 
     Returns:
     - expected_profit (float): Expected profit
     - standard_deviation_profit (float) Standard deviation of profit
     """
-    # Retrieve production DA values
-    if balancingScheme == "one":
-        production_DA = [
-            var.X
-            for var in m.getVars()
-            if "Power generation for 24 hours" in var.VarName
-        ]
-    else:
-        production_DA = [production_DA_dicc[t].x for t in range(24)]
+    # Retrieve the decision variables
+    production_DA_dic=model_var_dic["Production DA"]
+    delta_dic=model_var_dic["Delta"]
 
+    # Retrieve production DA values
+    production_DA = [production_DA_dic[t].x for t in range(24)]
     production_DA = np.hstack((production_DA, production_DA[-1]))
+
     # Retrieve price DA values
     price_DA = np.array(
         [scenarios[i]["Price DA"].values for i in range(len(scenarios))]
@@ -198,16 +185,8 @@ def conduct_analysis(
     price_DA = np.transpose(price_DA)
 
     # Retrieve delta values
-    if balancingScheme == "one":
-        delta = [
-            var.X
-            for var in m.getVars()
-            if "Forecast deviation for 24 hours for 250 scenarios" in var.VarName
-        ]
-        delta = np.array(delta).reshape(24, len(scenarios)).T
-    else:
-        delta = [[delta_dicc[t][w].x for w in range(len(scenarios))] for t in range(24)]
-        delta = np.array(delta).T
+    delta = [[delta_dic[t][w].x for w in range(len(scenarios))] for t in range(24)]
+    delta = np.array(delta).T
     delta = np.sort(delta, 0)
     delta_max = delta[-1, :]
     delta_max = np.hstack((delta_max, delta_max[-1]))
@@ -380,11 +359,9 @@ def conduct_analysis(
     profits = compute_profits(
         scenarios,
         m,
+        model_var_dic,
         balancingScheme,
-        production_DA_dicc=production_DA_dicc,
-        delta_dicc=delta_dicc,
-        delta_up_dicc=delta_up_dicc,
-        delta_down_dicc=delta_down_dicc,
+        # nbr_scenarios=len(scenarios),
     )
     expected_profit = np.mean(profits)
     standard_deviation_profit = np.std(profits, ddof=1)
@@ -451,31 +428,22 @@ def expected_profit_vs_CVaR(
 
         for beta in tqdm(betas):
             if balancingScheme == "one":
-                model = CVaR_OPBS(alpha=alpha, beta=beta, scenarios=scenarios)
+                model, model_var_dic = CVaR_OPBS(alpha=alpha, beta=beta, scenarios=scenarios)
             else:
-                 model, obj_initial, production_DA, delta, delta_up, delta_down, eta, zeta= CVaR_TPBS(
-                    alpha=alpha, beta=beta, scenarios=scenarios
-                ) 
+                model, model_var_dic = CVaR_TPBS(alpha=alpha, beta=beta, scenarios=scenarios) 
             CVaR = compute_CVaR(
                 scenarios=scenarios,
                 model=model,
+                model_var_dic=model_var_dic,
                 alpha=alpha,
                 balancingScheme=balancingScheme,
-                production_DA_dicc=production_DA,
-                delta_dicc=delta,
-                delta_up_dicc=delta_up,
-                delta_down_dicc=delta_down,
-                eta_dicc=eta,
-                zeta=zeta,
             )
             profits = compute_profits(
                 scenarios=scenarios,
                 m=model,
+                model_var_dic=model_var_dic,
                 balancingScheme=balancingScheme,
-                production_DA_dicc=production_DA,
-                delta_dicc=delta,
-                delta_up_dicc=delta_up,
-                delta_down_dicc=delta_down,
+                # nbr_scenarios=len(scenarios),
             )
             expected_profit = np.mean(profits)
             expected_profits.append(expected_profit)

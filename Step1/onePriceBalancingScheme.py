@@ -26,64 +26,68 @@ def onePriceBalancingScheme(
 
     ### Forecast inputs and model parameters
     P_nominal = 200  # MW
+    nb_scenarios = len(scenarios)
     pi = 1 / len(scenarios)
     price_DA = np.array(
-        [scenarios[i]["Price DA"].values for i in range(len(scenarios))]
+        [scenarios[i]["Price DA"].values for i in range(nb_scenarios)]
     )
     price_DA = np.transpose(price_DA)
     wind_production = P_nominal * np.array(
-        [scenarios[i]["Wind production"].values for i in range(len(scenarios))]
+        [scenarios[i]["Wind production"].values for i in range(nb_scenarios)]
     )
     wind_production = np.transpose(wind_production)
     power_needed = np.array(
-        [scenarios[i]["Power system need"].values for i in range(len(scenarios))]
+        [scenarios[i]["Power system need"].values for i in range(nb_scenarios)]
     )
     power_needed = np.transpose(power_needed)
 
     ### Variables
     # Define variables for power generation and forecast deviation
-    production_DA = m.addMVar(
-        shape=(24,),
-        lb=0,
-        ub=P_nominal,
-        name="Power generation for 24 hours",
-        vtype=GRB.CONTINUOUS,
-    )
-    delta = m.addMVar(
-        shape=(24, len(scenarios)),
-        lb=-np.inf,
-        name="Forecast deviation for 24 hours for 250 scenarios",
-        vtype=GRB.CONTINUOUS,
-    )
+    production_DA = {
+        t: m.addVar(lb=0, ub=P_nominal, name=f"DA power generation at time {t}.")
+        for t in range(24)
+    }
+    delta = {
+        t: {
+            w: m.addVar(
+                lb=-gp.GRB.INFINITY,
+                name=f"Forecast deviation at time {t} for scenario {w}.",
+            )
+            for w in range(nb_scenarios)
+        }
+        for t in range(24)
+    }
 
     ### Objective function
     # Set the objective function
-    objective = m.setObjective(
-        sum(
-            sum(
-                pi
-                * (
-                    price_DA[t, w] * production_DA[t]
-                    + (1 - power_needed[t, w]) * 0.9 * price_DA[t, w] * delta[t, w]
-                    + power_needed[t, w] * 1.2 * price_DA[t, w] * delta[t, w]
-                )
-                for w in range(len(scenarios))
+    objective = gp.quicksum(
+        gp.quicksum(
+            pi
+            * (
+                price_DA[t, w] * production_DA[t]
+                + (1 - power_needed[t, w]) * 0.9 * price_DA[t, w] * delta[t][w]
+                + power_needed[t, w] * 1.2 * price_DA[t, w] * delta[t][w]
             )
             for t in range(24)
-        ),
-        GRB.MAXIMIZE,
+        )
+        for w in range(nb_scenarios)
     )
+    m.setObjective(objective, gp.GRB.MAXIMIZE)
 
     ### Constraints
     # Define constraints on forecast deviation
-    m.addConstrs(
-        (
-            delta[t, w] == wind_production[t, w] - production_DA[t]
-            for t in range(24)
-            for w in range(len(scenarios))
-        ),
-        name="Delta definition with p_{t,w}^real and p_t^DA",
-    )
+    delta_value = {
+        t: {
+            w: m.addConstr(
+                delta[t][w],
+                gp.GRB.EQUAL,
+                wind_production[t, w] - production_DA[t],
+                name=f"Delta definition with p_{t,w}^real and p_{t}^DA",
+            )
+            for w in range(nb_scenarios)
+        }
+        for t in range(24)
+    }
 
     # Optimize the model if specified
     if optimise:
@@ -96,4 +100,11 @@ def onePriceBalancingScheme(
             print("Model have not converged - impossible to export results to json")
     else:
         m.update()
-    return m
+    
+    model_var_dic = {
+        "Objective": objective,
+        "Production DA": production_DA,
+        "Delta": delta
+    }
+
+    return m, model_var_dic
