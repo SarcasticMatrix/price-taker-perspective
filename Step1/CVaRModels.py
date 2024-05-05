@@ -7,7 +7,7 @@ from Step1.twoPriceBalancingScheme import twoPriceBalancingScheme
 
 
 def CVaR_onePriceBalancingScheme(
-    scenarios: list, beta: float = 0.5, alpha: float = 0.5, seed: int = 42
+    scenarios: list, beta: float = 0.5, alpha: float = 0.95, seed: int = 42
 ) -> gp.Model:
     """
     Implements the Conditional Value-at-Risk (CVaR) optimization model for the Offering Strategy Under a One-Price Balancing Scheme.
@@ -96,7 +96,7 @@ def CVaR_onePriceBalancingScheme(
 
 
 def CVaR_twoPriceBalancingScheme(
-    scenarios: list, beta: float = 0.5, alpha: float = 0.5, seed: int = 42
+    scenarios: list, beta: float = 0.5, alpha: float = 0.95, seed: int = 42
 ) -> gp.Model:
     """
     Implements the Conditional Value-at-Risk (CVaR) optimization model for the Offering Strategy Under a Two-Price Balancing Scheme.
