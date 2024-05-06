@@ -5,7 +5,6 @@ from typing import Literal
 
 import json
 
-
 def export_results(model: gp.Model):
     """
     Export the results to 'result.json'.

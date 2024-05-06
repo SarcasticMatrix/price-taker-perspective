@@ -1,8 +1,6 @@
 import gurobipy as gp
 from gurobipy import GRB
 import numpy as np
-import random
-import matplotlib.pyplot as plt
 
 from Step1.analysis import export_results
 

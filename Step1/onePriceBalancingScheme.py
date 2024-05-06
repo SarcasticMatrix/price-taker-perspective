@@ -1,7 +1,5 @@
 import gurobipy as gp
-from gurobipy import GRB
 import numpy as np
-import random
 
 from Step1.analysis import export_results
 
