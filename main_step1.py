@@ -36,7 +36,7 @@ variation_coefficient  = round(standard_deviation_profit/expected_profit,2)
 print(f"Expected profit: {round(expected_profit)}, Standard deviation: {round(standard_deviation_profit)}, variation_coefficient : {variation_coefficient }")
 
 ### Two Price Balancing Scheme
-model, model_var_dic = CVaR_TPBS(alpha=0.95, beta=0.9, scenarios=in_sample_scenarios)
+model, model_var_dic = CVaR_TPBS(alpha=0.95, beta=0.5, scenarios=in_sample_scenarios)
 expected_profit, standard_deviation_profit = conduct_analysis(m=model, model_var_dic=model_var_dic, scenarios=in_sample_scenarios, balancingScheme='two')
 variation_coefficient  = round(standard_deviation_profit/expected_profit,2)
 print(f"Expected profit: {round(expected_profit)}, Standard deviation: {round(standard_deviation_profit)}, variation_coefficient : {variation_coefficient }")

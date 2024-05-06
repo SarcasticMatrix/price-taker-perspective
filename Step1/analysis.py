@@ -761,11 +761,13 @@ def plot_profit_all_cases(scenarios, alpha=0.95, beta=0.5):
         print(f"Balancing Scheme price: {balancingScheme}, CVaR: {CVaR}, Expected profit: {expected_profit/10**3}")
 
         weights = np.ones_like(profit) / len(profit)
-        ax.hist(profit/10**3, weights=weights, bins=20, edgecolor='None', color='red', alpha=0.3)
-        ax.hist(profit/10**3, weights=weights, bins=20, edgecolor="black", facecolor='None')
+        ax.hist(profit/10**3, weights=weights, bins=20*2, edgecolor='None', color='red', alpha=0.3)
+        ax.hist(profit/10**3, weights=weights, bins=20*2, edgecolor="black", facecolor='None')
         ax.axvline(expected_profit/10**3, color='purple', linewidth=1.5)
         VaR = compute_VaR(profits=profit, alpha=alpha)
-        ax.axvline(VaR/10**3, color='blue', linewidth=1.5)
+        ax.axvline(VaR/10**3, color='blue', linestyle='--', linewidth=1.5)
+        CVaR = compute_CVaR(scenarios=scenarios, model=model, model_var_dic=model_var_dic, alpha=alpha, balancingScheme=balancingScheme)
+        ax.axvline(CVaR/10**3, color='blue', linewidth=1.5)
 
         if (ax == axes[1,0]) or (ax == axes[0,0]):
             ax.set_ylabel("Frequency")
