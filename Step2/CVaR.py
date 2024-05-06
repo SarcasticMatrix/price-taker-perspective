@@ -45,7 +45,7 @@ def CVaR(
     zeta = {
         m: {
             w: model.addVar(
-                lb=-np.inf, up=np.inf, name=f"zeta[{m,w}] (in kW)", vtype=GRB.CONTINUOUS
+                lb=-np.inf, ub=np.inf, name=f"zeta[{m,w}] (in kW)", vtype=GRB.CONTINUOUS
             )
             for w in range(nbSamples)
         }
@@ -59,30 +59,30 @@ def CVaR(
     ### Constraints
     # Define constraints on forecast deviation
     model.addConstr(
-        (
+        quicksum(
             quicksum(
-                quicksum(
-                    zeta[m][w]
-                for w in range(nbSamples)
-                )
-            for m in range(nbMin)
+                zeta[m][w] for w in range(nbSamples)
             )
-        ) <= (1 - epsilon) * beta * nbMin * nbSamples,
+                for m in range(nbMin)),
+        gp.GRB.LESS_EQUAL,
+        (1 - epsilon) * beta * nbMin * nbSamples,
         name="Probability definition",
     )
 
 
     for m in range(nbMin):
-        for w in range(nbSamples):  
+        for w in range(nbSamples):
             model.addConstr(
-                beta <= zeta[m][w],
+                beta,
+                gp.GRB.LESS_EQUAL,
+                zeta[m][w],
                 name=f"All the zeta above a threschold [{m,w}]",
             )
 
             model.addConstr(
-                (
-                    C_up - F_up[w,m] <= zeta[m][w]
-                ),
+                C_up - F_up[w,m],
+                gp.GRB.LESS_EQUAL,
+                zeta[m][w],
                 name=f"Delta between C_up and the production delivered below Zeta [{m,w}]",
             )
 

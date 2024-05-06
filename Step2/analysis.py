@@ -26,16 +26,22 @@ def is_violated(
     """
     Utilise les scenarios pour back test un C_up optimisé
     """
-    
-    nbrSamples = len(testing_scenarios)
-    violation_budget = violation_ratio * nbrSamples * 60
+
+    nbr_samples = len(testing_scenarios)
+    violation_budget = violation_ratio * 60 * nbr_samples
     results = []
+
+    # somme sur les scénarios w
     for profile in testing_scenarios:
 
         mask = profile['Load profile'] < C_up
-        count = np.sum(profile['Load profile'].loc[mask,])
-        results.append(count > violation_budget)
-    return results
+        count = np.sum(mask.values)
+        results.append(count)
+    
+    # somme les minutes m
+    results = np.sum(results)
+    
+    return 100 * results / (60 * nbr_samples)
 
 import matplotlib.pyplot as plt
 

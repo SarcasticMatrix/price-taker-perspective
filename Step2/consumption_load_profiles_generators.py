@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 import random
 
-def Comsumption_profile_generator(seed:int = 42):
+def comsumption_profile_generator(seed:int = 42):
     """
     Generate a list of scenarios based on wind production, price, and power system need.
 
@@ -23,7 +23,6 @@ def Comsumption_profile_generator(seed:int = 42):
         for j in range (nbScenarios):
             Delta=np.random.uniform(-25,25)
             Value=power_consumption[i-1,j]
-            print(Value)
             while (Delta+Value>500) or (Delta+Value<200):
                 Delta=np.random.uniform(-25,25)
             power_consumption[i,j]=Delta+power_consumption[i-1,j]
@@ -32,7 +31,7 @@ def Comsumption_profile_generator(seed:int = 42):
     return power_consumption
 
 
-def scenarios_selection_Step2(load_scenarios_df, seed: int = 42, nbr_scenarios: int = 50) -> tuple:
+def scenarios_selection(load_scenarios_df, nbr_scenarios: int = 50) -> tuple:
     """
     Select 50 scenarios randomly from the generated scenarios list.
 
@@ -62,4 +61,4 @@ def scenarios_selection_Step2(load_scenarios_df, seed: int = 42, nbr_scenarios: 
 
 
 if __name__ == "__main__":
-    Comsumption_profile_generator()
+    comsumption_profile_generator(seed=42)
