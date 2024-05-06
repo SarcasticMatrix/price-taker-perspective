@@ -16,3 +16,7 @@ model, C_up, beta, zeta = CVaR(scenarios=in_sample_scenarios)
 ### ALSO-X
 from Step2.ALSO_X import ALSOX
 model, C_up, binary = ALSOX(scenarios=in_sample_scenarios)
+
+#plots Step 2.1
+from Step2.Analysis_step2 import conduct_analysis
+conduct_analysis(in_sample_scenarios,C_up, binary)
