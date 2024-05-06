@@ -1,3 +1,5 @@
+import numpy as np
+
 def validation_out_of_sample(
         scenarios: list, opt_reserve_cap_bid: float):
     """
@@ -24,17 +26,20 @@ def validation_out_of_sample(
     )
 
     Delta = F_up - opt_mat
-    exp_reserve_shortfall= - min(Delta)
+    exp_reserve_shortfall = - min(Delta)
 
-    #Validation:
+    # Validation:
     Valitated = True
-    i=0
+    i = 0
     while (i < nbSamples) and Valitated == True:
+
         count=0
         list = scenarios[i].values
+
         for j in range(nbMin):
             if list[j]<opt_reserve_cap_bid:
                 count+=1
+
         if count>nbMin/10:
             Valitated = False
         i+=1
