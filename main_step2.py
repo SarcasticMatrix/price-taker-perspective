@@ -30,11 +30,12 @@ from Step2.analysis import conduct_analysis
 from Step2.analysis import is_violated
 
 violation_ratio = 0.1
-testing_scenarios = out_sample_scenarios
+testing_scenarios = in_sample_scenarios
 
-violations_CVaR = is_violated(testing_scenarios=testing_scenarios, C_up=C_up_CVaR)
+violations_CVaR, ES_CVaR = is_violated(testing_scenarios=testing_scenarios, C_up=C_up_CVaR)
 
-violations_ALSOX = is_violated(testing_scenarios=testing_scenarios, C_up=C_up_ALSOX)
+violations_ALSOX, ES_ALSOX = is_violated(testing_scenarios=testing_scenarios, C_up=C_up_ALSOX)
 
 number = int(100*(1-violation_ratio))
 print(f"\nPercentage of P{number} violation for {len(testing_scenarios)} testing profiles is:\n     - CVaR: {violations_CVaR}%\n     - ALSO-X: {violations_ALSOX}%\n")
+print(f"\nExpected Shortfall of the P{number} violations for {len(testing_scenarios)} testing profiles is:\n     - CVaR: {ES_CVaR}\n     - ALSO-X: {ES_ALSOX}\n")

@@ -22,14 +22,14 @@ def export_results(model: gp.Model):
 def is_violated(
         testing_scenarios:list, 
         C_up:float, 
-        violation_ratio:float = 0.1):
+    ):
     """
     Utilise les scenarios pour back test un C_up optimisé
     """
 
     nbr_samples = len(testing_scenarios)
-    violation_budget = violation_ratio * 60 * nbr_samples
     results = []
+    shortfalls = []
 
     # somme sur les scénarios w
     for profile in testing_scenarios:
@@ -37,11 +37,21 @@ def is_violated(
         mask = profile['Load profile'] < C_up
         count = np.sum(mask.values)
         results.append(count)
+
+        deviation = C_up - profile['Load profile']
+        shortfall = deviation.loc[mask,].values
+        if len(shortfall) > 0:
+            shortfalls.append(shortfall)    
     
     # somme les minutes m
     results = np.sum(results)
+    violations = 100 * results / (60 * nbr_samples)
+
+    # Expected shortfalls
+    shortfalls = np.hstack(shortfalls)
+    expected_shortfall = np.mean(shortfalls)
     
-    return 100 * results / (60 * nbr_samples)
+    return violations, expected_shortfall
 
 import matplotlib.pyplot as plt
 
