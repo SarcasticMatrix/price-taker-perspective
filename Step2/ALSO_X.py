@@ -40,13 +40,13 @@ def ALSOX(
     )
 
     binary = {
-        t: {
+        m: {
             w: model.addVar(
-                lb=0, name=f"binary at time {t} for scenario {w}.", vtype=GRB.BINARY
+                lb=0, name=f"binary at time {m} for scenario {w}.", vtype=GRB.BINARY
             )
             for w in range(nbSamples)
         }
-        for t in range(nbMin)
+        for m in range(nbMin)
     }
 
     ### Objective function
