@@ -1,6 +1,6 @@
 import pandas as pd
 
-consumption_load_scenarios = pd.read_csv("Step2/consumption_load_profiles_scenarios.csv", sep=",")
+consumption_load_scenarios = pd.read_csv("Step2/consumption_load_profiles_scenarios.csv", sep=",", index_col=1)
 
 from Step2.consumption_load_profiles_generators import scenarios_selection_Step2
 in_sample_scenarios, out_sample_scenarios = scenarios_selection_Step2(consumption_load_scenarios)

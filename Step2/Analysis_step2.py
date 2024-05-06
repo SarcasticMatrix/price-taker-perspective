@@ -20,24 +20,24 @@ def conduct_analysis(
     # Retrieve price scenarios values
     nbSamples=len(scenarios)
     nbMin = 60
-    #Load_profile = np.array([scenarios[i].values for i in range(nbSamples)])
-    Load_profile = np.zeros((nbSamples,nbMin))
-    for i in range (nbSamples):
-        Load_profile[i]=scenarios[i].values
+    Load_profile = np.array([scenarios[i].values for i in range(nbSamples)])
+    #Load_profile = np.zeros((nbSamples,nbMin))
+    #for i in range (nbSamples):
+        #Load_profile[i]=scenarios[i].values
     Binary = np.zeros((nbSamples,nbMin))
     for i in range(nbSamples):
        for j in range(nbMin):
           Binary[i,j] = binary[j][i].x
 
     # Retrieve load profiles values
-    load_random = Load_profile[20, :]
+    load_random = Load_profile[20,:,0]
     load_random = np.hstack((load_random, load_random[-1]))
     Binary = np.sort(Binary, 0)
-    load_max = Load_profile[-1, :]
+    load_max = Load_profile[-1, :,0]
     load_max = np.hstack((load_max, load_max[-1]))
-    load_mean = Load_profile.mean(axis=0)
+    load_mean = Load_profile[:,:,0].mean(axis=0)
     load_mean = np.hstack((load_mean, load_mean[-1]))
-    load_min = Load_profile[0, :]
+    load_min = Load_profile[0, :,0]
     load_min = np.hstack((load_min, load_min[-1]))
     
     # Retrieve Violations values
@@ -53,7 +53,7 @@ def conduct_analysis(
     
     
     # Create time array
-    min = [i for i in range(60)]
+    min = [i for i in range(61)]
 
     # Plotting
     fig, (ax1, ax2) = plt.subplots(
@@ -65,13 +65,13 @@ def conduct_analysis(
         min, load_min, color="purple", linestyle="dotted", where="post", linewidth=1
     )
     ax1.step(
-        time, load_mean, color="purple", linestyle="solid", where="post", linewidth=1
+        min, load_mean, color="purple", linestyle="solid", where="post", linewidth=1
     )
     ax1.step(
-        time, load_max, color="purple", linestyle="dashed", where="post", linewidth=1
+        min, load_max, color="purple", linestyle="dashed", where="post", linewidth=1
     )
     ax1.step(
-        time, load_random, color="purple", linestyle="dashed", where="post", linewidth=1
+        min, load_random, color="purple", linestyle="dashed", where="post", linewidth=1
     )
     #ax1.step(
         #np.nan,

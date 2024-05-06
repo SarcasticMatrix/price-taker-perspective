@@ -12,7 +12,7 @@ def Comsumption_profile_generator(seed:int = 42):
     random.seed(seed)
 
     nbMin = 60
-    nbScenarios = 201
+    nbScenarios = 200
 
     power_consumption = np.zeros((nbMin, nbScenarios))
 
