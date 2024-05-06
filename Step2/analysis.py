@@ -1,5 +1,81 @@
 import numpy as np
 import matplotlib.pyplot as plt
+import json
+import gurobipy as gp
+
+def export_results(model: gp.Model):
+    """
+    Export the results to 'result.json'.
+
+    Inputs:
+    - model (gp.Model): Optimized model
+    """
+    # Retrieve variable values and names
+    values = model.getAttr("X", model.getVars())
+    names = model.getAttr("VarName", model.getVars())
+    name_to_value = {name: value for name, value in zip(names, values)}
+
+    # Export results to JSON
+    with open("result.json", "w") as f:
+        json.dump(name_to_value, f, indent=1)
+
+def is_violated(
+        testing_scenarios:list, 
+        C_up:float, 
+        violation_ratio:float = 0.1):
+    """
+    Utilise les scenarios pour back test un C_up optimisé
+    """
+    
+    nbrSamples = len(testing_scenarios)
+    violation_budget = violation_ratio * nbrSamples * 60
+    results = []
+    for profile in testing_scenarios:
+
+        mask = profile['Load profile'] < C_up
+        count = np.sum(profile['Load profile'].loc[mask,])
+        results.append(count > violation_budget)
+    return results
+
+import matplotlib.pyplot as plt
+
+def cross_validation(
+        testing_scenarios: list,
+        C_up_CVaR: float,
+        C_up_ALSOX: float,
+        violation_ratio: float = 0.1
+):
+    nbr_scenarios = len(testing_scenarios)
+
+    results_CVaR = is_violated(testing_scenarios=testing_scenarios, C_up=C_up_CVaR, violation_ratio=violation_ratio)
+    violations_CVaR = 100 * sum(results_CVaR)/nbr_scenarios
+
+    results_ALSOX = is_violated(testing_scenarios=testing_scenarios, C_up=C_up_ALSOX, violation_ratio=violation_ratio)
+    violations_ALSOX = 100 * sum(results_ALSOX)/nbr_scenarios
+
+    methods = ['CVaR', 'ALSO-X']
+    violations = [violations_CVaR, violations_ALSOX]
+
+    fig, axs = plt.subplots(1, 2, figsize=(10, 5), sharey=True)
+
+    axs[0].bar(methods[0], violations[0], width=0.1)
+    axs[0].set_ylabel('% of violations', fontweight='bold')
+    axs[0].grid(axis='y', linestyle='--', dashes=(5, 10), color='gray', linewidth=0.5, alpha=0.8)
+    axs[0].tick_params(axis='x')
+    axs[0].set_title(f'CVaR: {violations[0]:.2f}% violations')
+
+    axs[1].bar(methods[1], violations[1], width=0.1)
+    axs[1].grid(axis='y', linestyle='--', dashes=(5, 10), color='gray', linewidth=0.5, alpha=0.8)
+    axs[1].tick_params(axis='x')
+    axs[1].set_title(f'ALSO-X: {violations[1]:.2f}% violations')
+
+    number = int(100*(1-violation_ratio))
+    fig.suptitle(f'Number of P{number} violations with {nbr_scenarios} testing profiles', fontweight='bold')
+
+    plt.tight_layout()
+    plt.show()
+
+
 
 def conduct_analysis(
     scenarios: list,
@@ -7,15 +83,10 @@ def conduct_analysis(
     binary: list
 ):
     """
-    Analyzes the results of the optimization model for the offering strategy under a one-price balancing scheme.
-
     Inputs:
     - scenarios (list of pd.dataframe): List of scenarios
     - C_up: optimal reserve capacity bid
     - binary: list of violations for the minutes and scenarios: 1 == violated
-
-    Returns:
-    - plots
     """
     # Retrieve price scenarios values
     nbSamples=len(scenarios)

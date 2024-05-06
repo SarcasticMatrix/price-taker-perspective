@@ -3,7 +3,7 @@ import numpy as np
 from gurobipy import GRB
 from gurobipy import quicksum
 
-from Step2.analysis_bis import export_results
+from Step2.analysis import export_results
 
 def CVaR(
     scenarios: list, export: bool = False, optimise: bool = True, epsilon: float = 0.1
@@ -45,7 +45,7 @@ def CVaR(
     zeta = {
         m: {
             w: model.addVar(
-                lb=-np.inf, name=f"zeta[{m,w}] (in kW)", vtype=GRB.CONTINUOUS
+                lb=-np.inf, up=np.inf, name=f"zeta[{m,w}] (in kW)", vtype=GRB.CONTINUOUS
             )
             for w in range(nbSamples)
         }

@@ -3,10 +3,10 @@ import numpy as np
 from gurobipy import GRB
 from gurobipy import quicksum
 
-from Step2.analysis_bis import export_results
+from Step2.analysis import export_results
 
 def ALSOX(
-    scenarios: list, export: bool = False, optimise: bool = True, epsilon: float = 0.9
+    scenarios: list, export: bool = False, optimise: bool = True, epsilon: float = 0.1
 ) -> gp.Model:
     """
     Implement model for the Offering Strategy Under P90 requirement with CVaR method
@@ -30,7 +30,7 @@ def ALSOX(
     nbMin=60
     nbSamples=len(scenarios)
     F_up = np.array([scenarios[i].values for i in range(nbSamples)])
-    q = (1 - epsilon) * nbMin * nbSamples
+    q = epsilon * nbMin * nbSamples
 
 
     ### Variables
@@ -42,7 +42,7 @@ def ALSOX(
     binary = {
         m: {
             w: model.addVar(
-                lb=0, name=f"binary at time {m} for scenario {w}.", vtype=GRB.BINARY
+                name=f"binary at time {m} for scenario {w}.", vtype=GRB.BINARY
             )
             for w in range(nbSamples)
         }
@@ -51,10 +51,9 @@ def ALSOX(
 
     ### Objective function
     # Set the objective function
-    objective = model.setObjective(C_up,GRB.MAXIMIZE)
+    objective = model.setObjective(C_up, GRB.MAXIMIZE)
 
     ### Constraints
-    # Define constraints on forecast deviation
     model.addConstr(
         (
             quicksum(
