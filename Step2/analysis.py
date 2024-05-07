@@ -95,8 +95,10 @@ def cross_validation(
 
 def conduct_analysis(
     scenarios: list,
-    C_up: float, 
-    binary: list
+    C_up_ALSOX: float, 
+    binary: list,
+    C_up_CVaR: float,
+    Zeta: float 
 ):
     """
     Inputs:
@@ -104,31 +106,39 @@ def conduct_analysis(
     - C_up: optimal reserve capacity bid
     - binary: list of violations for the minutes and scenarios: 1 == violated
     """
-    # Retrieve price scenarios values
+    #print(zeta)
+    # Retrieve optimaztion values
     nbSamples=len(scenarios)
     nbMin = 60
     Load_profile = np.array([scenarios[i].values for i in range(nbSamples)])
-    #Load_profile = np.zeros((nbSamples,nbMin))
-    #for i in range (nbSamples):
-        #Load_profile[i]=scenarios[i].values
+
     Binary = np.zeros((nbSamples,nbMin))
     for i in range(nbSamples):
        for j in range(nbMin):
           Binary[i,j] = binary[j][i].x
+    
 
     # Retrieve load profiles values
-    load_random = Load_profile[20,:,0]
+    load_random = Load_profile[2,:,0]
     load_random = np.hstack((load_random, load_random[-1]))
-    Binary = np.sort(Binary, 0)
+    Load_profile = np.sort(Load_profile, 0)
     load_max = Load_profile[-1, :,0]
     load_max = np.hstack((load_max, load_max[-1]))
     load_mean = Load_profile[:,:,0].mean(axis=0)
     load_mean = np.hstack((load_mean, load_mean[-1]))
     load_min = Load_profile[0, :,0]
     load_min = np.hstack((load_min, load_min[-1]))
+
+    #Delta C_up_CVaR 
+    C_up_CVaR_vect = C_up_CVaR*np.ones((nbMin+1))
+    Delta_random = C_up_CVaR_vect - load_random
+    Delta_max = C_up_CVaR_vect - load_max
+    Delta_min = C_up_CVaR_vect - load_min
+    Delta_mean = C_up_CVaR_vect - load_mean
+
     
     # Retrieve Violations values
-    binary_random = Binary[20, :]
+    binary_random = Binary[2, :]
     binary_random = np.hstack((binary_random, binary_random[-1]))
     Binary = np.sort(Binary, 0)
     binary_max = Binary[-1, :]
@@ -137,43 +147,46 @@ def conduct_analysis(
     binary_mean = np.hstack((binary_mean, binary_mean[-1]))
     binary_min = Binary[0, :]
     binary_min = np.hstack((binary_min, binary_min[-1]))
+
+    # Retrieve Violations weighted values
+    zeta_random = Zeta[2, :]
+    zeta_random = np.hstack((zeta_random, zeta_random[-1]))
+    Zeta = np.sort(Zeta, 0)
+    zeta_max = Zeta[-1, :]
+    zeta_max = np.hstack((zeta_max, zeta_max[-1]))
+    zeta_mean = Zeta.mean(axis=0)
+    zeta_mean = np.hstack((zeta_mean, zeta_mean[-1]))
+    zeta_min = Zeta[0, :]
+    zeta_min = np.hstack((zeta_min, zeta_min[-1]))
     
     
     # Create time array
     min = [i for i in range(61)]
 
+    #################################################################################
+    ### ALSO-X ###
     # Plotting
     fig, (ax1, ax2) = plt.subplots(
         2, 1, sharex=True, gridspec_kw={"height_ratios": [3, 1.5]}
     )
 
-    # Plot production DA and wind production forecast
+    # Plot consumption load profile and optimal reserve capacity bid
     ax1.step(
         min, load_min, color="purple", linestyle="dotted", where="post", linewidth=1
     )
     ax1.step(
-        min, load_mean, color="purple", linestyle="solid", where="post", linewidth=1
+        min, load_mean, color="purple", linestyle="dashed", where="post", linewidth=1
     )
     ax1.step(
-        min, load_max, color="purple", linestyle="dashed", where="post", linewidth=1
+        min, load_max, color="purple", linestyle="dotted", where="post", linewidth=1
     )
     ax1.step(
-        min, load_random, color="purple", linestyle="dashed", where="post", linewidth=1
+        min, load_random, color="purple", linestyle="solid", where="post", label=r"$F_{m,w}$", linewidth=1
     )
-    #ax1.step(
-        #np.nan,
-        #np.nan,
-        #color="purple",
-        #linestyle="solid",
-        #label="Power availability",
-        #where="post",
-        #linewidth=0.7,
-    #)
-    #ax1.step(, production_DA, label=r"$p_{t}^{DA}$", where="post", color="red")
-    ax1.set_title(
-        r"DA offered production $p_t^{DA}$ and wind power forecast $p_{t,w}^{real}$"
-    )
-    ax1.set_ylabel("Power [kW]")
+    ax1.step(min, [C_up_ALSOX for i in range(61)], label=r"$C_{up,ALSO-X}$", where="post", color="blue", linewidth=0.7)
+    ax1.step(min, [C_up_CVaR for i in range(61)], label=r"$C_{up,CVaR}$", where="post", color="red", linewidth=0.7)
+    ax1.set_title(r"Consumption load profile $F_{m,w}$ and optimal reserve capacity bid $C_{up}$")
+    ax1.set_ylabel("Load profile [kW]")
     ax1.grid(
         visible=True,
         which="major",
@@ -187,21 +200,20 @@ def conduct_analysis(
     ax1.legend(loc="upper left")
 
     
-    # Plot power system need
+    # Plot system violation 
     ax2.step(
         min,
         binary_min,
         color="green",
-        linestyle="solid",
+        linestyle="dotted",
         where="post",
-        label=r"$x_{t,w}^B$",
         linewidth=1,
     )
     ax2.step(
         min,
         binary_max,
         color="green",
-        linestyle="solid",
+        linestyle="dotted",
         where="post",
         linewidth=1,
     )
@@ -209,7 +221,7 @@ def conduct_analysis(
         min,
         binary_mean,
         color="green",
-        linestyle="dotted",
+        linestyle="dashed",
         where="post",
         linewidth=1,
     )
@@ -217,21 +229,13 @@ def conduct_analysis(
         min,
         binary_random,
         color="green",
-        linestyle="dotted",
+        linestyle="solid",
         where="post",
+        label=r"$y_{m,w}$",
         linewidth=1,
     )
-    #ax2.step(
-        #np.nan,
-        #np.nan,
-        #color="green",
-        #linestyle="solid",
-        #label=r"$x_{t,w}^B$",
-        #linewidth=0.7,
-    #)
-    ax2.set_title(r"Power system need $x_{t,w}^B$")
+    ax2.set_title(r"System violations $y_{m,w}$")
     ax2.set_xlabel("Minutes")
-    ax2.set_yticks([0, 1], ["Non-Violated", "Violated"])
     ax2.grid(
         visible=True,
         which="major",
@@ -243,8 +247,179 @@ def conduct_analysis(
     )
     ax2.grid(which="minor", visible=False)
     ax2.legend(loc="upper left")
+    label_axis_x = ["" for i in range(61)]
+    for i in range(13):
+        label_axis_x [5*i]= f"{5*i}"
+    plt.xticks(min, label_axis_x)
+    plt.show()
 
-    plt.xticks(min, [f"m{i}" for i in range(60)] + ["H0"])
+    #################################################################################
+    ### CVaR ###
+    # Plotting
+    fig, (axi1, axi2, axi3) = plt.subplots(
+        3, 1, sharex=True, gridspec_kw={"height_ratios": [3, 1.5, 1.5]}
+    )
+
+    # Plot production DA and wind production forecast
+    axi1.step(
+        min, load_min, color="purple", linestyle="dotted", where="post", linewidth=1
+    )
+    axi1.step(
+        min, load_mean, color="purple", linestyle="dashed", where="post", linewidth=1
+    )
+    axi1.step(
+        min, load_max, color="purple", linestyle="dotted", where="post", linewidth=1
+    )
+    axi1.step(
+        min, load_random, color="purple", linestyle="solid", where="post", label=r"$F_{m,w}$", linewidth=1
+    )
+    axi1.step(min, [C_up_ALSOX for i in range(61)], label=r"$C_{up,ALSO-X}$", where="post", color="red", linewidth=0.7)
+    axi1.set_title(r"Consumption load profile $F_{m,w}$ and optimal reserve capacity bid $C_{up}$")
+    axi1.set_ylabel("Load profile [kW]")
+    axi1.grid(
+        visible=True,
+        which="major",
+        linestyle="--",
+        dashes=(5, 10),
+        color="gray",
+        linewidth=0.5,
+        alpha=0.8,
+    )
+    axi1.grid(which="minor", visible=False)
+    axi1.legend(loc="upper left")
+
+
+    # Plot system violation weighted
+    axi2.step(
+        min,
+        Delta_min,
+        color="green",
+        linestyle="dotted",
+        where="post",
+        linewidth=1,
+    )
+    axi2.step(
+        min,
+        zeta_min,
+        color="purple",
+        linestyle="dotted",
+        where="post",
+        linewidth=1,
+    )
+    #axi2.step(
+        #min,
+        #Delta_max,
+        #color="green",
+        #linestyle="dotted",
+        #where="post",
+        #linewidth=1,
+    #)
+    axi2.step(
+        min,
+        zeta_max,
+        color="purple",
+        linestyle="dotted",
+        where="post",
+        linewidth=1,
+    )
+    #axi2.step(
+        #min,
+        #Delta_mean,
+        #color="green",
+        #linestyle="dashed",
+        #where="post",
+        #linewidth=1,
+    #)
+    axi2.step(
+        min,
+        zeta_mean,
+        color="purple",
+        linestyle="dashed",
+        where="post",
+        linewidth=1,
+    )
+    axi2.step(
+        min,
+        Delta_random,
+        color="green",
+        linestyle="solid",
+        where="post",
+        label=r"$y_{m,w}$",
+        linewidth=1,
+    )
+    axi2.step(
+        min,
+        zeta_random,
+        color="purple",
+        linestyle="solid",
+        where="post",
+        linewidth=1,
+    )
+    axi2.set_title(r"System violations $y_{m,w}$")
+    axi2.grid(
+        visible=True,
+        which="major",
+        linestyle="--",
+        dashes=(5, 10),
+        color="gray",
+        linewidth=0.5,
+        alpha=0.8,
+    )
+    axi2.grid(which="minor", visible=False)
+    axi2.legend(loc="upper left")
+
+
+    # Plot system violation 
+    axi3.step(
+        min,
+        binary_min,
+        color="green",
+        linestyle="dotted",
+        where="post",
+        linewidth=1,
+    )
+    axi3.step(
+        min,
+        binary_max,
+        color="green",
+        linestyle="dotted",
+        where="post",
+        linewidth=1,
+    )
+    axi3.step(
+        min,
+        binary_mean,
+        color="green",
+        linestyle="dashed",
+        where="post",
+        linewidth=1,
+    )
+    axi3.step(
+        min,
+        binary_random,
+        color="green",
+        linestyle="solid",
+        where="post",
+        label=r"$y_{m,w}$",
+        linewidth=1,
+    )
+    axi3.set_title(r"System violations $y_{m,w}$")
+    axi3.set_xlabel("Minutes")
+    axi3.grid(
+        visible=True,
+        which="major",
+        linestyle="--",
+        dashes=(5, 10),
+        color="gray",
+        linewidth=0.5,
+        alpha=0.8,
+    )
+    axi3.grid(which="minor", visible=False)
+    axi3.legend(loc="upper left")
+    label_axis_x = ["" for i in range(61)]
+    for i in range(13):
+        label_axis_x [5*i]= f"{5*i}"
+    plt.xticks(min, label_axis_x)
     plt.show()
 
     return 

@@ -1,4 +1,5 @@
 import pandas as pd
+import numpy as np
 
 consumption_load_scenarios = pd.read_csv("Step2/consumption_load_profiles_scenarios.csv", sep=",")
 
@@ -13,6 +14,10 @@ in_sample_scenarios, out_sample_scenarios = scenarios_selection(consumption_load
 from Step2.CVaR import CVaR
 model, C_up_CVaR, beta, zeta = CVaR(scenarios=in_sample_scenarios)
 C_up_CVaR = C_up_CVaR.x
+Zeta = np.zeros((50,60))
+for i in range(50):
+    for j in range(60):
+        Zeta[i,j] = zeta[j][i].x
 
 ### ALSO-X
 from Step2.ALSOX import ALSOX
@@ -20,7 +25,7 @@ model, C_up_ALSOX, binary = ALSOX(scenarios=in_sample_scenarios)
 C_up_ALSOX = C_up_ALSOX.x
 
 from Step2.analysis import conduct_analysis
-# conduct_analysis(in_sample_scenarios,C_up, binary)
+conduct_analysis(in_sample_scenarios,C_up_ALSOX,binary,C_up_CVaR,Zeta)
 
 
 ########################################################################################################
