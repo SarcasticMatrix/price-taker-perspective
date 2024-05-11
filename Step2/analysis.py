@@ -439,9 +439,11 @@ def c_vs_ES(
     epsilons = [0, 0.025, 0.05, 0.1, 0.15, 0.2]
     C_up_CVaRs = []
     expected_shortfalls_CVaRs = []
+    violations_CVaRs = []
 
     C_up_ALSOXs = []
     expected_shortfalls_ALSOXs = []
+    violations_ALSOXs = []
 
     for epsilon in tqdm(epsilons):
 
@@ -451,9 +453,10 @@ def c_vs_ES(
         C_up_CVaR = C_up_CVaR.x
         sys.stdout = sys.__stdout__
 
-        _, expected_shortfall = is_violated(testing_scenarios=testing_scenarios, C_up=C_up_CVaR)
+        violation, expected_shortfall = is_violated(testing_scenarios=testing_scenarios, C_up=C_up_CVaR)
         C_up_CVaRs.append(C_up_CVaR)
         expected_shortfalls_CVaRs.append(expected_shortfall)
+        violations_CVaRs.append(violation)
 
         # ALSO-X
         sys.stdout = open(os.devnull, 'w')
@@ -461,9 +464,10 @@ def c_vs_ES(
         C_up_ALSOX = C_up_ALSOX.x
         sys.stdout = sys.__stdout__
 
-        _, expected_shortfall = is_violated(testing_scenarios=testing_scenarios, C_up=C_up_ALSOX)
+        violation, expected_shortfall = is_violated(testing_scenarios=testing_scenarios, C_up=C_up_ALSOX)
         C_up_ALSOXs.append(C_up_ALSOX)
         expected_shortfalls_ALSOXs.append(expected_shortfall)
+        violations_ALSOXs.append(violation)
 
     import numpy as np
     numbers = [int(100*(1-epsilon)) for epsilon in epsilons]
@@ -475,22 +479,48 @@ def c_vs_ES(
     C_up_ALSOX = np.array(C_up_ALSOXs)
     expected_shortfalls_ALSOXs = np.array(expected_shortfalls_ALSOXs)
 
-    plt.plot(numbers, C_up_CVaRs, label='CVaR', color='orange')
-    plt.scatter(numbers, C_up_CVaRs, color='orange')
-    plt.plot(numbers, expected_shortfalls_CVaRs, linestyle='--', color='orange')
-    plt.scatter(numbers, expected_shortfalls_CVaRs, color='orange')
+    fig = plt.figure()
 
-    plt.plot(numbers, C_up_ALSOXs, label='ALSOX', color='blue')
-    plt.scatter(numbers, C_up_ALSOXs, color='blue')
-    plt.plot(numbers, expected_shortfalls_ALSOXs, linestyle='--', color='blue')
-    plt.scatter(numbers, expected_shortfalls_ALSOXs, color='blue')
+    # Subplot 1: CVaR and ALSOX as a function of numbers
+    ax1a = plt.subplot2grid((4, 2), (0, 0), rowspan=3)
+    ax1a.plot(numbers, C_up_CVaRs, label='CVaR', color='orange')
+    ax1a.scatter(numbers, C_up_CVaRs, color='orange')
+    ax1a.plot(numbers, C_up_ALSOXs, label='ALSOX', color='blue')
+    ax1a.scatter(numbers, C_up_ALSOXs, color='blue')
 
-    plt.legend()
-    plt.grid(visible=True,which="major",linestyle="--",dashes=(5, 10),color="gray",linewidth=0.5,alpha=0.8,)
-    plt.title("Optimal reserve bid and expected reserve shortfall change over rule")
-    plt.xticks(numbers, [f"P{number}" for number in numbers])
-    plt.ylabel("Reserve bid [kW]")
-    plt.xlabel("Rule")
-    plt.minorticks_on()
+    ax1a.plot(numbers, expected_shortfalls_CVaRs, color='orange', linestyle='--')
+    ax1a.scatter(numbers, expected_shortfalls_CVaRs, color='orange')
+    ax1a.plot(numbers, expected_shortfalls_ALSOXs, color='blue', linestyle='--')
+    ax1a.scatter(numbers, expected_shortfalls_ALSOXs, color='blue')
+
+    ax1a.legend()
+    ax1a.grid(visible=True, which="major", linestyle="--", dashes=(5, 10), color="gray", linewidth=0.5, alpha=0.8)
+    ax1a.set_title("Optimal reserve bid over rule")
+    ax1a.set_xticks(numbers)
+    ax1a.set_xticklabels([f"P{number}" for number in numbers])
+    ax1a.set_ylabel("Reserve bid [kW]")
+    ax1a.set_xlabel("Rule")
+
+    ax1b = plt.subplot2grid((4, 2), (3, 0), rowspan=1)
+    ax1b.plot(numbers, violations_CVaRs, color='orange', linewidth=0.7)
+    ax1b.plot(numbers, violations_ALSOXs, color='blue', linewidth=0.7)
+    ax1b.set_ylabel("Number of violations [%]")
+    ax1b.set_xlabel("Reserve bid [kW]")
+    ax1b.set_xticks(numbers)
+    ax1b.set_xticklabels([f"P{number}" for number in numbers])
+    ax1b.grid(visible=True, which="major", linestyle="--", dashes=(5, 10), color="gray", linewidth=0.5, alpha=0.8)
+
+    # Subplot 2: Expected shortfall as a function of C_up
+    ax2 = plt.subplot2grid((2, 2), (0, 1), rowspan=2)
+    ax2.plot(C_up_CVaRs, expected_shortfalls_CVaRs, label='CVaR', color='orange')
+    ax2.scatter(C_up_CVaRs, expected_shortfalls_CVaRs, color='orange')
+    ax2.plot(C_up_ALSOXs, expected_shortfalls_ALSOXs, label='ALSOX', color='blue')
+    ax2.scatter(C_up_ALSOXs, expected_shortfalls_ALSOXs, color='blue')
+    ax2.legend()
+    ax2.grid(visible=True, which="major", linestyle="--", dashes=(5, 10), color="gray", linewidth=0.5, alpha=0.8)
+    ax2.set_title("Expected reserve shortfall over reserve bid")
+    ax2.set_ylabel("Expected shortfall [kW]")
+    ax2.set_xlabel("Reserve bid [kW]")
+
+    plt.tight_layout()
     plt.show()
-
