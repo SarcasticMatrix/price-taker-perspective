@@ -3,8 +3,6 @@ import numpy as np
 from gurobipy import GRB
 from gurobipy import quicksum
 
-from Step2.analysis import export_results
-
 def ALSOX(
     scenarios: list, export: bool = False, optimise: bool = True, epsilon: float = 0.1
 ) -> gp.Model:
@@ -78,11 +76,6 @@ def ALSOX(
     if optimise:
         model.optimize()
 
-        # Export results if specified
-        if model.status == 2 and export:
-            export_results(m)
-        elif model.status != 2 and export:
-            print("Model have not converged - impossible to export results to json")
     else:
         model.update()
         
