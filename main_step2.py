@@ -10,6 +10,8 @@ in_sample_scenarios, out_sample_scenarios = scenarios_selection(consumption_load
 ###### Optimisation
 ########################################################################################################
 
+from Step2.analysis import conduct_analysis
+
 ### CVaR
 from Step2.CVaR import CVaR
 model, C_up_CVaR, beta, zeta = CVaR(scenarios=in_sample_scenarios)
@@ -24,9 +26,7 @@ from Step2.ALSOX import ALSOX
 model, C_up_ALSOX, binary = ALSOX(scenarios=in_sample_scenarios)
 C_up_ALSOX = C_up_ALSOX.x
 
-from Step2.analysis import conduct_analysis
-conduct_analysis(in_sample_scenarios,C_up_ALSOX,binary,C_up_CVaR,Zeta)
-
+conduct_analysis(scenarios=in_sample_scenarios, C_up_ALSOX=C_up_ALSOX, binary=binary, C_up_CVaR=C_up_CVaR, Zeta=Zeta)
 
 ########################################################################################################
 ###### Out of samples
@@ -44,3 +44,10 @@ violations_ALSOX, ES_ALSOX = is_violated(testing_scenarios=testing_scenarios, C_
 number = int(100*(1-violation_ratio))
 print(f"\nPercentage of P{number} violation for {len(testing_scenarios)} testing profiles is:\n     - CVaR: {violations_CVaR}%\n     - ALSO-X: {violations_ALSOX}%\n")
 print(f"\nExpected Shortfall of the P{number} violations for {len(testing_scenarios)} testing profiles is:\n     - CVaR: {ES_CVaR}\n     - ALSO-X: {ES_ALSOX}\n")
+
+########################################################################################################
+###### How the optimal reserve bid and expected reserve shortfall change
+########################################################################################################
+
+from Step2.analysis import c_vs_ES
+c_vs_ES(in_sample_scenarios=in_sample_scenarios, testing_scenarios=testing_scenarios)
