@@ -259,8 +259,8 @@ def conduct_analysis(
     #################################################################################
     ### CVaR ###
     # Plotting
-    fig, (axi1, axi2, axi3) = plt.subplots(
-        3, 1, sharex=True, gridspec_kw={"height_ratios": [3, 1.5, 1.5]}
+    fig, (axi1, axi2) = plt.subplots(
+        2, 1, sharex=True, gridspec_kw={"height_ratios": [3, 1.5]}
     )
 
     # Plot production DA and wind production forecast
@@ -276,7 +276,7 @@ def conduct_analysis(
     axi1.step(
         min, load_random, color="purple", linestyle="solid", where="post", label=r"$F_{m,w}$", linewidth=1
     )
-    axi1.step(min, [C_up_ALSOX for i in range(61)], label=r"$C_{up,ALSO-X}$", where="post", color="red", linewidth=0.7)
+    axi1.step(min, [C_up_CVaR for i in range(61)], label=r"$C_{up,CVAR}$", where="post", color="red", linewidth=0.7)
     axi1.set_title(r"Consumption load profile $F_{m,w}$ and optimal reserve capacity bid $C_{up}$")
     axi1.set_ylabel("Load profile [kW]")
     axi1.grid(
@@ -293,6 +293,7 @@ def conduct_analysis(
 
 
     # Plot system violation weighted
+    axi1.step(min, [0 for i in range(61)],  where="post", color="black", linewidth=0.7)
     axi2.step(
         min,
         Delta_min,
@@ -309,14 +310,6 @@ def conduct_analysis(
         where="post",
         linewidth=1,
     )
-    #axi2.step(
-        #min,
-        #Delta_max,
-        #color="green",
-        #linestyle="dotted",
-        #where="post",
-        #linewidth=1,
-    #)
     axi2.step(
         min,
         zeta_max,
@@ -325,14 +318,6 @@ def conduct_analysis(
         where="post",
         linewidth=1,
     )
-    #axi2.step(
-        #min,
-        #Delta_mean,
-        #color="green",
-        #linestyle="dashed",
-        #where="post",
-        #linewidth=1,
-    #)
     axi2.step(
         min,
         zeta_mean,
@@ -347,7 +332,7 @@ def conduct_analysis(
         color="green",
         linestyle="solid",
         where="post",
-        label=r"$y_{m,w}$",
+        label=r"$\zeta _{m,w}$",
         linewidth=1,
     )
     axi2.step(
@@ -355,6 +340,7 @@ def conduct_analysis(
         zeta_random,
         color="purple",
         linestyle="solid",
+        label=r"$C_{up} - F_{m,w}$",
         where="post",
         linewidth=1,
     )
@@ -369,56 +355,7 @@ def conduct_analysis(
         alpha=0.8,
     )
     axi2.grid(which="minor", visible=False)
-    axi2.legend(loc="upper left")
-
-
-    # Plot system violation 
-    axi3.step(
-        min,
-        binary_min,
-        color="green",
-        linestyle="dotted",
-        where="post",
-        linewidth=1,
-    )
-    axi3.step(
-        min,
-        binary_max,
-        color="green",
-        linestyle="dotted",
-        where="post",
-        linewidth=1,
-    )
-    axi3.step(
-        min,
-        binary_mean,
-        color="green",
-        linestyle="dashed",
-        where="post",
-        linewidth=1,
-    )
-    axi3.step(
-        min,
-        binary_random,
-        color="green",
-        linestyle="solid",
-        where="post",
-        label=r"$y_{m,w}$",
-        linewidth=1,
-    )
-    axi3.set_title(r"System violations $y_{m,w}$")
-    axi3.set_xlabel("Minutes")
-    axi3.grid(
-        visible=True,
-        which="major",
-        linestyle="--",
-        dashes=(5, 10),
-        color="gray",
-        linewidth=0.5,
-        alpha=0.8,
-    )
-    axi3.grid(which="minor", visible=False)
-    axi3.legend(loc="upper left")
+    axi2.legend(loc="lower left")
     label_axis_x = ["" for i in range(61)]
     for i in range(13):
         label_axis_x[5*i] = f"{5*i}"
