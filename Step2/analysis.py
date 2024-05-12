@@ -188,7 +188,7 @@ def conduct_analysis(
     )
     ax1.step(min, [C_up_ALSOX for i in range(61)], label=r"$C_{ALSO-X}$", where="post", color="blue", linewidth=0.7)
     ax1.step(min, [C_up_CVaR for i in range(61)], label=r"$C_{CVaR}$", where="post", color="red", linewidth=0.7)
-    ax1.set_title(r"Consumption load profile $F_{m,w}$ and optimal reserve capacity bid $C$")
+    ax1.set_title(r"Consumption load profile $F_{m,w}$ and optimal reserve capacity bid $C_{up}$")
     ax1.set_ylabel("Load profile [kW]")
     ax1.grid(
         visible=True,
@@ -234,10 +234,10 @@ def conduct_analysis(
         color="green",
         linestyle="solid",
         where="post",
-        label=r"$y_{m,w}$",
+        label=r"$y_{m,w_0}$",
         linewidth=1,
     )
-    ax2.set_title(r"System violations")
+    ax2.set_title(r"System violations (ALSO-X method)")
     ax2.set_xlabel("Minutes")
     ax2.grid(
         visible=True,
@@ -274,9 +274,9 @@ def conduct_analysis(
         min, load_max, color="purple", linestyle="dotted", where="post", linewidth=1
     )
     axi1.step(
-        min, load_random, color="purple", linestyle="solid", where="post", label=r"$F_{m,w}$", linewidth=1
+        min, load_random, color="purple", linestyle="solid", where="post", label=r"$F_{m,w_0}$", linewidth=1
     )
-    axi1.step(min, [C_up_CVaR for i in range(61)], label=r"$C_{up,CVAR}$", where="post", color="red", linewidth=0.7)
+    axi1.step(min, [C_up_CVaR for i in range(61)], label=r"$C_{up,CVaR}$", where="post", color="red", linewidth=0.7)
     axi1.set_title(r"Consumption load profile $F_{m,w}$ and optimal reserve capacity bid $C_{up}$")
     axi1.set_ylabel("Load profile [kW]")
     axi1.grid(
@@ -291,9 +291,8 @@ def conduct_analysis(
     axi1.grid(which="minor", visible=False)
     axi1.legend(loc="upper left")
 
-
     # Plot system violation weighted
-    axi1.step(min, [0 for i in range(61)],  where="post", color="black", linewidth=0.7)
+    axi2.step(min, [0 for i in range(61)],  where="post", color="black", linewidth=0.7)
     axi2.step(
         min,
         Delta_min,
@@ -332,7 +331,7 @@ def conduct_analysis(
         color="green",
         linestyle="solid",
         where="post",
-        label=r"$\zeta _{m,w}$",
+        label=r"$\zeta _{m,w_0}$",
         linewidth=1,
     )
     axi2.step(
@@ -340,11 +339,11 @@ def conduct_analysis(
         zeta_random,
         color="purple",
         linestyle="solid",
-        label=r"$C_{up} - F_{m,w}$",
+        label=r"$C_{up} - F_{m,w_0}$",
         where="post",
         linewidth=1,
     )
-    axi2.set_title("System violations")
+    axi2.set_title("System violations power weighted (CVaR method)")
     axi2.grid(
         visible=True,
         which="major",
