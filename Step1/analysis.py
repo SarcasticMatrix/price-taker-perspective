@@ -2,6 +2,8 @@ import matplotlib.pyplot as plt
 import gurobipy as gp
 import numpy as np
 from typing import Literal
+from inputs.scenario_generator import scenarios_selection
+import seaborn as sns
 
 import json
 
@@ -603,8 +605,21 @@ def out_vs_in_sample(
         show: bool = False
     ):
     """
-    Plot etc.
+    Plot the profit distribution over scenarios for in-sample and out-of-sample scenarios.
+
+    Args:
+        in_sample_scenarios (list): A list of scenarios to be used for in-sample analysis.
+        out_sample_scenarios (list): A list of scenarios to be used for out-of-sample analysis.
+        balancingScheme (Literal['one', 'two']): The balancing scheme to be used ('one' or 'two').
+        CVaR (bool, optional): Whether to use the CVaR model. Defaults to False.
+        alpha (float, optional): The alpha value for the CVaR model. Defaults to 0.95.
+        beta (float, optional): The beta value for the CVaR model. Defaults to 0.5.
+        show (bool, optional): Whether to display the plot. Defaults to False.
+
+    Returns:
+        matplotlib.figure.Figure: The plot figure if show is True, otherwise None.
     """
+
 
     sys.stdout = open(os.devnull, 'w')
     if CVaR == False:
@@ -793,4 +808,54 @@ def plot_profit_all_cases(scenarios, alpha=0.95, beta=0.5):
     plt.minorticks_on()
     plt.tight_layout()
     plt.show()
+
+
+def different_in_out_scenarios(balancingScheme="one"):
+    profit_in_sample = []
+    profit_out_sample = []
+    nbr_scenarios_list = [i*50 for i in range(1, 13)]
+    for nbr_scenarios in nbr_scenarios_list:
+        profit_in_sample_per_scenario = []
+        profit_out_sample_per_scenario = []
+        for seed in range(27, 43):
+            in_sample_scenarios, out_sample_scenarios = scenarios_selection(seed=seed, nbr_scenarios=nbr_scenarios)
+            if balancingScheme == "one":
+                model, model_var_dic = CVaR_OPBS(alpha=0.95, beta=0.5, scenarios=in_sample_scenarios)
+            else:
+                model, model_var_dic = CVaR_TPBS(alpha=0.95, beta=0.5, scenarios=in_sample_scenarios)
+            profit_in_sample_per_scenario.append(np.mean(compute_profits(scenarios=in_sample_scenarios, m=model, model_var_dic=model_var_dic, balancingScheme=balancingScheme, nbr_scenarios=nbr_scenarios)))
+            profit_out_sample_per_scenario.append(np.mean(compute_profits_out_sample(scenarios=out_sample_scenarios, m=model, model_var_dic=model_var_dic, balancingScheme=balancingScheme)))
+        profit_in_sample.append(profit_in_sample_per_scenario)
+        profit_out_sample.append(profit_out_sample_per_scenario)
+    
+    # Plotting
+    # fig, ax = plt.subplots(figsize=(10, 6))
+    # ax.boxplot(profit_in_sample, positions=nbr_scenarios_list, widths=25, showfliers=False, patch_artist=True, boxprops=dict(facecolor='skyblue'))
+    # ax.boxplot(profit_out_sample, positions=nbr_scenarios_list, widths=25, showfliers=False, patch_artist=True, boxprops=dict(facecolor='lightgreen'))
+    # Plotting
+    fig, ax = plt.subplots(figsize=(10, 6))
+    sns.violinplot(data=profit_in_sample, positions=nbr_scenarios_list, widths=20, color='skyblue', alpha=0.7)
+    sns.violinplot(data=profit_out_sample, positions=nbr_scenarios_list, widths=20, color='lightgreen', alpha=0.7)
+    
+    handles = [plt.Rectangle((0,0),1,1, color='skyblue', alpha=0.7), plt.Rectangle((0,0),1,1, color='lightgreen', alpha=0.7)]
+    legend_labels = ['Expected profit in-sample dispersion', 'Expected profit out-of-sample dispersion']
+    plt.legend(handles, legend_labels, loc='upper left')
+    
+
+    plt.xlabel('Number of in-sample scenarios')
+    plt.ylabel('Profit (€)')
+    if balancingScheme == "one":
+        plt.title('Expected profit dispersion against number of in-sample scenarios for the one price scheme')
+    else:
+        plt.title('Expected profit dispersion against number of in-sample scenarios for the two price scheme')
+   
+    plt.xticks(np.arange(len(nbr_scenarios_list)), nbr_scenarios_list) 
+    plt.grid(True)
+    plt.tight_layout()
+    plt.show()
+
+
+
+    
+        
 
