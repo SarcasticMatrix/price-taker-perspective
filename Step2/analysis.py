@@ -234,7 +234,7 @@ def conduct_analysis(
         color="green",
         linestyle="solid",
         where="post",
-        label=r"$y_{m,w_0}$",
+        label=r"$1 - y_{m,w_0}$",
         linewidth=1,
     )
     ax2.set_title(r"System violations (ALSO-X method)")
