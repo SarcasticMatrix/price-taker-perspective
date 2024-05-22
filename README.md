@@ -1,4 +1,4 @@
-Step 1:
+# Step 1:
 
 Inputs of step 1 (inputs):
 - power_system_need_scenarios.csv : 3 different scenarios of power needs (1 for deficit or 0 for excess)
@@ -15,7 +15,7 @@ Code and function for step 1:
 Code to compile: main_step1.py
 
 
-Step 2:
+# Step 2:
 
 Inputs of step 2:
 - consumption_load_load_profiles_scenarios.py: Scenario generator for the 200 load profiles scenarios following the requirements.
